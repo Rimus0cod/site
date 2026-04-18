@@ -6,6 +6,7 @@ import { ScheduleGrid } from "../../components/admin/ScheduleGrid";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import type { ScheduleDay } from "../../lib/types";
+import { normalizeTimeValue } from "../../lib/utils";
 
 const defaultDays: ScheduleDay[] = Array.from({ length: 7 }, (_, dayOfWeek) => ({
   dayOfWeek,
@@ -14,18 +15,34 @@ const defaultDays: ScheduleDay[] = Array.from({ length: 7 }, (_, dayOfWeek) => (
   isDayOff: dayOfWeek === 0,
 }));
 
+function getDefaultDays() {
+  return defaultDays.map((day) => ({ ...day }));
+}
+
 export function SchedulePage() {
   const [params, setParams] = useSearchParams();
   const barberId = params.get("barberId") ?? undefined;
   const { data: barbers } = useAdminBarbers();
   const { data: schedule } = useSchedule(barberId);
   const saveSchedule = useSaveSchedule(barberId);
-  const [days, setDays] = useState<ScheduleDay[]>(defaultDays);
+  const [days, setDays] = useState<ScheduleDay[]>(getDefaultDays);
 
   useEffect(() => {
     if (schedule?.days?.length) {
-      setDays(schedule.days);
+      const normalizedDays = schedule.days
+        .map((day) => ({
+          dayOfWeek: day.dayOfWeek,
+          startTime: day.isDayOff ? null : normalizeTimeValue(day.startTime),
+          endTime: day.isDayOff ? null : normalizeTimeValue(day.endTime),
+          isDayOff: Boolean(day.isDayOff),
+        }))
+        .sort((left, right) => left.dayOfWeek - right.dayOfWeek);
+
+      setDays(normalizedDays);
+      return;
     }
+
+    setDays(getDefaultDays());
   }, [schedule]);
 
   return (
@@ -62,4 +79,3 @@ export function SchedulePage() {
     </main>
   );
 }
-

@@ -17,22 +17,27 @@ export function ScheduleGrid({ days, onChange }: Props) {
   return (
     <div className="grid gap-3">
       {days.map((day, index) => (
-        <div key={day.dayOfWeek} className="grid gap-3 rounded-3xl border border-brand-ink/10 bg-white/70 p-4 md:grid-cols-[90px_1fr_1fr_120px] md:items-center">
+        <div key={day.dayOfWeek} className="grid gap-3 rounded-3xl border border-brand-ink/10 bg-white/80 p-4 md:grid-cols-[90px_1fr_1fr_140px] md:items-center">
           <div className="font-semibold text-brand-ink">{dayLabel(day.dayOfWeek)}</div>
           <Input
             type="time"
+            step={60}
             value={day.startTime ?? ""}
             disabled={day.isDayOff}
+            className="font-semibold text-brand-ink"
             onChange={(event) => updateDay(index, { startTime: event.target.value })}
           />
           <Input
             type="time"
+            step={60}
             value={day.endTime ?? ""}
             disabled={day.isDayOff}
+            className="font-semibold text-brand-ink"
             onChange={(event) => updateDay(index, { endTime: event.target.value })}
           />
-          <label className="flex items-center gap-3 text-sm text-brand-ink/70">
+          <label className="flex items-center gap-3 text-sm font-medium text-brand-ink/85">
             <input
+              className="h-4 w-4 accent-brand-olive"
               checked={Boolean(day.isDayOff)}
               type="checkbox"
               onChange={(event) =>
@@ -50,4 +55,3 @@ export function ScheduleGrid({ days, onChange }: Props) {
     </div>
   );
 }
-

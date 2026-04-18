@@ -15,6 +15,11 @@ export class CreateBookingDto {
   @Length(7, 20)
   clientPhone!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  clientTelegramUsername?: string;
+
   @IsISO8601()
   startTime!: string;
 
@@ -22,4 +27,3 @@ export class CreateBookingDto {
   @IsString()
   notes?: string;
 }
-

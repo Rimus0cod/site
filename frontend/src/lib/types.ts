@@ -23,6 +23,7 @@ export interface Booking {
   serviceId: string;
   clientName: string;
   clientPhone: string;
+  clientTelegramUsername?: string | null;
   startTime: string;
   endTime: string;
   status: BookingStatus;
@@ -56,4 +57,3 @@ export interface AdminUser {
   email: string;
   role: string;
 }
-

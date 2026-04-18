@@ -39,6 +39,14 @@ export class BookingEntity {
   @Column({ name: "client_phone", length: 20 })
   clientPhone!: string;
 
+  @Column({
+    name: "client_telegram_username",
+    type: "varchar",
+    length: 64,
+    nullable: true,
+  })
+  clientTelegramUsername!: string | null;
+
   @Column({ name: "start_time", type: "timestamp" })
   startTime!: Date;
 
@@ -54,4 +62,3 @@ export class BookingEntity {
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 }
-

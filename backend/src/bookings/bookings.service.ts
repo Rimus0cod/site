@@ -144,6 +144,7 @@ export class BookingsService {
           serviceId: dto.serviceId,
           clientName: dto.clientName,
           clientPhone: dto.clientPhone,
+          clientTelegramUsername: this.normalizeTelegramUsername(dto.clientTelegramUsername),
           startTime,
           endTime,
           notes: dto.notes ?? null,
@@ -155,6 +156,7 @@ export class BookingsService {
 
       const hydrated = await this.getBooking(booking.id);
       await this.telegramService.sendNewBookingAlert(hydrated);
+      await this.telegramService.sendClientBookingAlert(hydrated);
       return hydrated;
     } catch (error) {
       if (error instanceof ConflictException) {
@@ -175,7 +177,17 @@ export class BookingsService {
     booking.status = dto.status;
     const saved = await this.bookingRepository.save(booking);
     await this.telegramService.sendStatusUpdateAlert(saved);
+    await this.telegramService.sendClientStatusUpdate(saved);
     return saved;
+  }
+
+  private normalizeTelegramUsername(username?: string) {
+    if (!username) {
+      return null;
+    }
+
+    const normalized = username.trim().replace(/^@+/, "").toLowerCase();
+    return normalized.length > 0 ? normalized : null;
   }
 
   private getDateBounds(date: string) {
@@ -233,7 +245,21 @@ export class BookingsService {
   }
 
   private combineDateAndTime(date: string, time: string) {
-    return new Date(`${date}T${time}:00`);
+    const normalizedTime = this.normalizeTime(time);
+    return new Date(`${date}T${normalizedTime}`);
+  }
+
+  private normalizeTime(time: string) {
+    const trimmed = time.trim();
+    if (/^\d{2}:\d{2}$/.test(trimmed)) {
+      return `${trimmed}:00`;
+    }
+
+    if (/^\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+
+    throw new BadRequestException(`Invalid time format: ${time}`);
   }
 
   private formatDate(date: Date) {

@@ -13,12 +13,7 @@ interface FormValues {
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { register, handleSubmit } = useForm<FormValues>({
-    defaultValues: {
-      email: "admin@barberbook.local",
-      password: "ChangeMe123!",
-    },
-  });
+  const { register, handleSubmit } = useForm<FormValues>();
   const setSession = useAuthStore((state) => state.setSession);
   const login = useLogin();
 
@@ -36,9 +31,13 @@ export function LoginPage() {
           <h1 className="font-display text-4xl text-brand-ink">Welcome back</h1>
         </div>
         <form className="grid gap-4" onSubmit={submit}>
-          <Input placeholder="Email" {...register("email")} />
-          <Input placeholder="Password" type="password" {...register("password")} />
-          {login.isError ? <p className="text-sm text-red-600">Login failed. Check credentials.</p> : null}
+          <Input placeholder="Email from backend/.env" {...register("email")} />
+          <Input placeholder="Password from backend/.env" type="password" {...register("password")} />
+          {login.isError ? (
+            <p className="text-sm text-red-600">
+              Login failed. Use `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `backend/.env`.
+            </p>
+          ) : null}
           <Button disabled={login.isPending} type="submit">
             {login.isPending ? "Signing in..." : "Sign in"}
           </Button>
@@ -47,4 +46,3 @@ export function LoginPage() {
     </main>
   );
 }
-

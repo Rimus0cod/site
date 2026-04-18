@@ -7,6 +7,7 @@ export interface CreateBookingPayload {
   serviceId: string;
   clientName: string;
   clientPhone: string;
+  clientTelegramUsername?: string;
   startTime: string;
   notes?: string;
 }
@@ -70,4 +71,3 @@ export function useUpdateBookingStatus() {
     },
   });
 }
-

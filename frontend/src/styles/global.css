@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color: #12100d;
+  color: #0d0b08;
   background: #fff8ef;
   font-family: "Trebuchet MS", Verdana, sans-serif;
 }
@@ -24,4 +24,34 @@ a {
 
 * {
   box-sizing: border-box;
+}
+
+body,
+input,
+textarea,
+select,
+button {
+  color: #0d0b08;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(13, 11, 8, 0.48);
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="time"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field,
+input[type="time"]::-webkit-datetime-edit-hour-field,
+input[type="time"]::-webkit-datetime-edit-minute-field {
+  color: #0d0b08;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0.85;
 }

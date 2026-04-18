@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import * as bcrypt from "bcrypt";
 import { DataSource } from "typeorm";
 import configuration from "../config/configuration";
@@ -13,6 +14,7 @@ async function seedAdmin() {
     password: config.database.password,
     database: config.database.name,
     entities: [AdminEntity],
+    synchronize: true,
   });
 
   await dataSource.initialize();

@@ -4,6 +4,7 @@ import type { Barber, Service } from "../lib/types";
 interface ContactData {
   clientName: string;
   clientPhone: string;
+  clientTelegramUsername: string;
   notes: string;
 }
 
@@ -21,7 +22,7 @@ interface BookingStoreState {
   reset: () => void;
 }
 
-const initialContact = { clientName: "", clientPhone: "", notes: "" };
+const initialContact = { clientName: "", clientPhone: "", clientTelegramUsername: "", notes: "" };
 
 export const useBookingStore = create<BookingStoreState>((set) => ({
   selectedService: null,
@@ -43,4 +44,3 @@ export const useBookingStore = create<BookingStoreState>((set) => ({
       contact: initialContact,
     }),
 }));
-

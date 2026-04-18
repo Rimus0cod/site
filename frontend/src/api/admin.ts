@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
+import { normalizeTimeValue } from "../lib/utils";
 import type { AdminUser, ScheduleResponse } from "../lib/types";
 
 interface LoginResponse {
@@ -31,9 +32,18 @@ export function useSaveSchedule(barberId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { days: ScheduleResponse["days"] }) => {
+      const normalizedPayload = {
+        days: payload.days.map((day) => ({
+          dayOfWeek: day.dayOfWeek,
+          startTime: day.isDayOff ? undefined : normalizeTimeValue(day.startTime) ?? undefined,
+          endTime: day.isDayOff ? undefined : normalizeTimeValue(day.endTime) ?? undefined,
+          isDayOff: Boolean(day.isDayOff),
+        })),
+      };
+
       const { data } = await apiClient.put<ScheduleResponse>(
         `/admin/barbers/${barberId}/schedule`,
-        payload,
+        normalizedPayload,
       );
       return data;
     },
@@ -42,4 +52,3 @@ export function useSaveSchedule(barberId?: string) {
     },
   });
 }
-

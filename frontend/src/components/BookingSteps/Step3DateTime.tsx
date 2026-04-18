@@ -21,6 +21,7 @@ export function Step3DateTime() {
         <Input
           min={new Date().toISOString().slice(0, 10)}
           type="date"
+          className="font-semibold text-brand-ink"
           value={selectedDate}
           onChange={(event) => setSelectedDate(event.target.value)}
         />
@@ -29,9 +30,11 @@ export function Step3DateTime() {
       <Card className="space-y-4">
         <div>
           <h3 className="font-display text-2xl text-brand-ink">Available slots</h3>
-          <p className="text-sm text-brand-ink/70">Select a time that fits both the service duration and the barber schedule.</p>
+          <p className="text-sm font-medium text-brand-ink/85">
+            Select a time that fits both the service duration and the barber schedule.
+          </p>
         </div>
-        {isLoading ? <p className="text-sm text-brand-ink/70">Loading slots...</p> : null}
+        {isLoading ? <p className="text-sm font-medium text-brand-ink/85">Loading slots...</p> : null}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {data?.slots?.map((slot) => (
             <Button
@@ -45,10 +48,11 @@ export function Step3DateTime() {
           ))}
         </div>
         {selectedDate && data?.slots?.length === 0 ? (
-          <p className="text-sm text-brand-ink/70">No slots available for the selected date.</p>
+          <p className="text-sm font-medium text-brand-ink/85">
+            No slots available for the selected date. If you picked today, the working hours may already be over.
+          </p>
         ) : null}
       </Card>
     </div>
   );
 }
-

@@ -1,9 +1,9 @@
-import { IsDateString, IsEnum, IsOptional, IsUUID } from "class-validator";
+import { IsEnum, IsOptional, IsUUID, Matches } from "class-validator";
 import { BookingStatus } from "../../common/enums/booking-status.enum";
 
 export class ListAdminBookingsQueryDto {
   @IsOptional()
-  @IsDateString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   date?: string;
 
   @IsOptional()
@@ -14,4 +14,3 @@ export class ListAdminBookingsQueryDto {
   @IsEnum(BookingStatus)
   status?: BookingStatus;
 }
-
