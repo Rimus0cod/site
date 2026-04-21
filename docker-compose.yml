@@ -21,9 +21,11 @@ services:
       - ./backend/.env
     environment:
       NODE_ENV: development
+      DB_SYNCHRONIZE: "false"
     depends_on:
       - postgres
       - redis
+    command: sh -c "npm run migration:run && npm run start:dev"
     ports:
       - "3001:3001"
     volumes:

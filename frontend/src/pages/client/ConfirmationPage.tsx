@@ -1,41 +1,254 @@
-import dayjs from "dayjs";
-import { Link, useParams } from "react-router-dom";
-import { useBooking } from "../../api/bookings";
-import { Card } from "../../components/ui/Card";
+import { useEffect, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useBooking, useCancelBooking, useRescheduleBooking, useSlots } from "../../api/bookings";
+import { ClientShell } from "../../components/client/ClientShell";
 import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
+import { Textarea } from "../../components/ui/Textarea";
+import { getContent } from "../../lib/content";
+import { formatDateTime, formatTime } from "../../lib/locale";
+import { SHOP_INFO } from "../../lib/shop";
+import { useClientPortalStore } from "../../store/clientPortalStore";
+import { usePreferencesStore } from "../../store/preferencesStore";
 
 export function ConfirmationPage() {
   const { id } = useParams();
-  const { data, isLoading } = useBooking(id);
+  const [params] = useSearchParams();
+  const token = params.get("token") ?? undefined;
+  const language = usePreferencesStore((state) => state.language);
+  const saveAccess = useClientPortalStore((state) => state.saveAccess);
+  const copy = getContent(language);
+  const { data, isLoading } = useBooking(id, token);
+  const cancelBooking = useCancelBooking();
+  const rescheduleBooking = useRescheduleBooking();
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
+
+  const { data: slotsData, isLoading: slotsLoading } = useSlots(
+    data?.barberId,
+    rescheduleDate,
+    data?.serviceId,
+  );
+
+  useEffect(() => {
+    if (data?.startTime) {
+      setRescheduleDate(data.startTime.slice(0, 10));
+      setSelectedSlot("");
+    }
+  }, [data?.startTime]);
+
+  useEffect(() => {
+    if (id && token) {
+      saveAccess({ bookingId: id, token });
+    }
+  }, [id, saveAccess, token]);
 
   if (isLoading) {
-    return <main className="mx-auto max-w-3xl px-6 py-12">Loading booking...</main>;
+    return (
+      <ClientShell>
+        <main className="mx-auto max-w-3xl px-6 py-12">{copy.confirmation.loading}</main>
+      </ClientShell>
+    );
+  }
+
+  if (!token) {
+    return (
+      <ClientShell>
+        <main className="mx-auto max-w-3xl px-6 py-12">
+          <Card className="space-y-4">
+            <h1 className="font-display text-4xl text-brand-ink">{copy.confirmation.incompleteTitle}</h1>
+            <p className="text-brand-ink/70">{copy.confirmation.incompleteText}</p>
+            <Link to="/">
+              <Button>{copy.confirmation.backHome}</Button>
+            </Link>
+          </Card>
+        </main>
+      </ClientShell>
+    );
   }
 
   if (!data) {
-    return <main className="mx-auto max-w-3xl px-6 py-12">Booking not found.</main>;
+    return (
+      <ClientShell>
+        <main className="mx-auto max-w-3xl px-6 py-12">{copy.confirmation.notFound}</main>
+      </ClientShell>
+    );
   }
 
+  const canManage = data.status !== "canceled" && data.status !== "completed";
+
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <Card className="space-y-6">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">Booking confirmed in system</p>
-          <h1 className="font-display text-4xl text-brand-ink">Your appointment request is in.</h1>
-          <p className="text-brand-ink/70">Status: {data.status}</p>
+    <ClientShell>
+      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10">
+        <Card className="space-y-6">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.confirmation.accessLabel}</p>
+            <h1 className="font-display text-5xl leading-none text-brand-ink">{copy.confirmation.title}</h1>
+            <p className="text-brand-ink/70">
+              {copy.confirmation.status}: {copy.status[data.status]}
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 text-sm font-medium text-brand-ink/80">
+              <p>{copy.confirmation.client}: {data.clientName}</p>
+              <p>{copy.confirmation.phone}: {data.clientPhone}</p>
+              <p>{copy.confirmation.barber}: {data.barber?.name ?? data.barberId}</p>
+              <p>{copy.confirmation.service}: {data.service?.name ?? data.serviceId}</p>
+            </div>
+            <div className="grid gap-3 text-sm font-medium text-brand-ink/80">
+              <p>{copy.confirmation.start}: {formatDateTime(data.startTime, language)}</p>
+              <p>{copy.confirmation.end}: {formatTime(data.endTime, language)}</p>
+              <p>
+                {copy.confirmation.created}:{" "}
+                {data.createdAt ? formatDateTime(data.createdAt, language) : copy.confirmation.justNow}
+              </p>
+              {data.cancellationReason ? (
+                <p>{copy.confirmation.cancelReason}: {data.cancellationReason}</p>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/">
+              <Button>{copy.confirmation.backHome}</Button>
+            </Link>
+            <Link to="/account">
+              <Button className="bg-brand-sand">{copy.confirmation.portal}</Button>
+            </Link>
+            <a href={`tel:${SHOP_INFO.phone.replace(/\s+/g, "")}`}>
+              <Button className="border border-brand-line/10 bg-brand-panel">{copy.confirmation.call}</Button>
+            </a>
+          </div>
+          <div className="rounded-[1.5rem] border border-brand-line/10 bg-brand-sand/35 p-4 text-sm font-medium text-brand-ink/80">
+            {copy.confirmation.accountSaved}
+          </div>
+        </Card>
+
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <Card className="space-y-5">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.confirmation.selfServiceLabel}</p>
+              <h2 className="font-display text-4xl leading-none text-brand-ink">{copy.confirmation.selfServiceTitle}</h2>
+              <p className="text-sm text-brand-ink/70">{copy.confirmation.selfServiceText}</p>
+            </div>
+
+            {canManage ? (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-3 rounded-[1.75rem] border border-brand-line/10 bg-brand-cream/38 p-5">
+                  <h3 className="font-semibold text-brand-ink">{copy.confirmation.cancelTitle}</h3>
+                  <Textarea
+                    className="min-h-24"
+                    placeholder={copy.confirmation.cancelPlaceholder}
+                    value={cancelReason}
+                    onChange={(event) => setCancelReason(event.target.value)}
+                  />
+                  {cancelBooking.isError ? (
+                    <p className="text-sm text-red-600">{copy.confirmation.cancelError}</p>
+                  ) : null}
+                  <Button
+                    className="w-full bg-brand-sand"
+                    disabled={cancelBooking.isPending}
+                    onClick={() => {
+                      if (!token) {
+                        return;
+                      }
+
+                      void cancelBooking.mutateAsync({
+                        id: data.id,
+                        token,
+                        reason: cancelReason || undefined,
+                      });
+                    }}
+                    type="button"
+                  >
+                    {cancelBooking.isPending ? copy.confirmation.cancelPending : copy.confirmation.cancelAction}
+                  </Button>
+                </div>
+
+                <div className="space-y-3 rounded-[1.75rem] border border-brand-line/10 bg-brand-cream/38 p-5">
+                  <h3 className="font-semibold text-brand-ink">{copy.confirmation.rescheduleTitle}</h3>
+                  <Input
+                    min={new Date().toISOString().slice(0, 10)}
+                    type="date"
+                    value={rescheduleDate}
+                    onChange={(event) => setRescheduleDate(event.target.value)}
+                  />
+                  {slotsLoading ? <p className="text-sm text-brand-ink/65">{copy.confirmation.slotsLoading}</p> : null}
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {slotsData?.slots?.map((slot) => (
+                      <Button
+                        key={slot}
+                        className={selectedSlot === slot ? "bg-brand-olive text-white" : "bg-brand-sand"}
+                        onClick={() => setSelectedSlot(slot)}
+                        type="button"
+                      >
+                        {slot.slice(11, 16)}
+                      </Button>
+                    ))}
+                  </div>
+                  {rescheduleDate && slotsData?.slots?.length === 0 ? (
+                    <p className="text-sm text-brand-ink/65">{copy.confirmation.slotsEmpty}</p>
+                  ) : null}
+                  {rescheduleBooking.isError ? (
+                    <p className="text-sm text-red-600">{copy.confirmation.rescheduleError}</p>
+                  ) : null}
+                  <Button
+                    disabled={!selectedSlot || rescheduleBooking.isPending}
+                    onClick={() => {
+                      if (!token || !selectedSlot) {
+                        return;
+                      }
+
+                      void rescheduleBooking.mutateAsync({
+                        id: data.id,
+                        token,
+                        startTime: selectedSlot,
+                      });
+                    }}
+                    type="button"
+                  >
+                    {rescheduleBooking.isPending
+                      ? copy.confirmation.reschedulePending
+                      : copy.confirmation.rescheduleAction}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[1.75rem] border border-brand-line/10 bg-brand-cream/38 p-5 text-sm text-brand-ink/70">
+                {copy.confirmation.closedText}
+              </div>
+            )}
+          </Card>
+
+          <Card className="space-y-5">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.confirmation.contactsLabel}</p>
+              <h2 className="font-display text-3xl text-brand-ink">{SHOP_INFO.name}</h2>
+            </div>
+            <div className="grid gap-3 text-sm text-brand-ink/80">
+              <p>Address: {SHOP_INFO.address}</p>
+              <p>{copy.confirmation.phone}: {SHOP_INFO.phone}</p>
+              <p>Telegram: {SHOP_INFO.telegram}</p>
+              <p>Instagram: {SHOP_INFO.instagram}</p>
+            </div>
+            <div className="grid gap-2 text-sm text-brand-ink/70">
+              {copy.shop.hours.map((item) => (
+                <p key={item.label}>
+                  {item.label}: {item.value}
+                </p>
+              ))}
+            </div>
+            <a
+              href={`https://t.me/${SHOP_INFO.telegram.replace("@", "")}`}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Button className="w-full bg-brand-sand">{copy.confirmation.telegram}</Button>
+            </a>
+          </Card>
         </div>
-        <div className="grid gap-3 text-sm text-brand-ink/80">
-          <p>Client: {data.clientName}</p>
-          <p>Phone: {data.clientPhone}</p>
-          <p>Barber: {data.barber?.name ?? data.barberId}</p>
-          <p>Service: {data.service?.name ?? data.serviceId}</p>
-          <p>Start: {dayjs(data.startTime).format("MMMM D, YYYY HH:mm")}</p>
-        </div>
-        <Link to="/">
-          <Button>Back to home</Button>
-        </Link>
-      </Card>
-    </main>
+      </main>
+    </ClientShell>
   );
 }
-

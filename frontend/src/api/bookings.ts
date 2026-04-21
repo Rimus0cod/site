@@ -10,6 +10,7 @@ export interface CreateBookingPayload {
   clientTelegramUsername?: string;
   startTime: string;
   notes?: string;
+  website?: string;
 }
 
 export function useSlots(barberId?: string, date?: string, serviceId?: string) {
@@ -25,6 +26,13 @@ export function useSlots(barberId?: string, date?: string, serviceId?: string) {
   });
 }
 
+interface BookingLookupFilters {
+  date?: string;
+  barberId?: string;
+  status?: BookingStatus | "";
+  search?: string;
+}
+
 export function useCreateBooking() {
   return useMutation({
     mutationFn: async (payload: CreateBookingPayload) => {
@@ -34,25 +42,74 @@ export function useCreateBooking() {
   });
 }
 
-export function useBooking(id?: string) {
+export function useBooking(id?: string, token?: string) {
   return useQuery({
-    queryKey: ["booking", id],
-    enabled: Boolean(id),
+    queryKey: ["booking", id, token],
+    enabled: Boolean(id && token),
     queryFn: async () => {
-      const { data } = await apiClient.get<Booking>(`/bookings/${id}`);
+      const { data } = await apiClient.get<Booking>(`/bookings/${id}`, {
+        params: { token },
+      });
       return data;
     },
   });
 }
 
-export function useAdminBookings(date?: string) {
-  return useQuery({
-    queryKey: ["admin", "bookings", date],
-    queryFn: async () => {
-      const { data } = await apiClient.get<Booking[]>("/admin/bookings", {
-        params: date ? { date } : undefined,
+export function useCancelBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: string; token: string; reason?: string }) => {
+      const { data } = await apiClient.post<Booking>(`/bookings/${payload.id}/cancel`, {
+        token: payload.token,
+        reason: payload.reason,
       });
       return data;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["booking", data.id] });
+    },
+  });
+}
+
+export function useRescheduleBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: string; token: string; startTime: string }) => {
+      const { data } = await apiClient.patch<Booking>(`/bookings/${payload.id}/reschedule`, payload);
+      return data;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["booking", data.id] });
+    },
+  });
+}
+
+export function useAdminBookings(filters?: BookingLookupFilters) {
+  return useQuery({
+    queryKey: ["admin", "bookings", filters],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Booking[]>("/admin/bookings", {
+        params: {
+          date: filters?.date || undefined,
+          barberId: filters?.barberId || undefined,
+          status: filters?.status || undefined,
+          search: filters?.search || undefined,
+        },
+      });
+      return data;
+    },
+  });
+}
+
+export function useAdminCreateBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateBookingPayload & { status?: BookingStatus }) => {
+      const { data } = await apiClient.post<Booking>("/admin/bookings", payload);
+      return data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "bookings"] });
     },
   });
 }

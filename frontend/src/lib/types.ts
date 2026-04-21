@@ -28,6 +28,9 @@ export interface Booking {
   endTime: string;
   status: BookingStatus;
   notes?: string | null;
+  cancellationReason?: string | null;
+  managementToken?: string;
+  createdAt?: string;
   barber?: Barber;
   service?: Service;
 }
@@ -50,6 +53,20 @@ export interface ScheduleDay {
 export interface ScheduleResponse {
   barberId: string;
   days: ScheduleDay[];
+}
+
+export interface ScheduleException {
+  id?: string;
+  date: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  isDayOff?: boolean;
+  note?: string | null;
+}
+
+export interface ScheduleExceptionsResponse {
+  barberId: string;
+  exceptions: ScheduleException[];
 }
 
 export interface AdminUser {

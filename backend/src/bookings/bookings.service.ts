@@ -3,18 +3,31 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { randomBytes } from "crypto";
 import { DataSource, Not, Repository } from "typeorm";
 import { BarbersService } from "../barbers/barbers.service";
 import { BookingStatus } from "../common/enums/booking-status.enum";
+import { ScheduleExceptionEntity } from "../schedule/schedule-exception.entity";
 import { WorkScheduleEntity } from "../schedule/work-schedule.entity";
 import { ServicesService } from "../services/services.service";
 import { TelegramService } from "../telegram/telegram.service";
 import { BookingEntity } from "./booking.entity";
+import {
+  combineDateAndTime,
+  formatDatePart,
+  formatDateTime,
+  isPositiveRange,
+  normalizeTelegramUsername,
+} from "./booking-rules";
+import { CancelBookingDto } from "./dto/cancel-booking.dto";
 import { CreateBookingDto } from "./dto/create-booking.dto";
+import { CreateAdminBookingDto } from "./dto/create-admin-booking.dto";
 import { GetSlotsQueryDto } from "./dto/get-slots-query.dto";
 import { ListAdminBookingsQueryDto } from "./dto/list-admin-bookings-query.dto";
+import { RescheduleBookingDto } from "./dto/reschedule-booking.dto";
 import { UpdateBookingStatusDto } from "./dto/update-booking-status.dto";
 
 const SLOT_STEP_MINUTES = 30;
@@ -26,19 +39,17 @@ export class BookingsService {
     private readonly bookingRepository: Repository<BookingEntity>,
     @InjectRepository(WorkScheduleEntity)
     private readonly scheduleRepository: Repository<WorkScheduleEntity>,
+    @InjectRepository(ScheduleExceptionEntity)
+    private readonly scheduleExceptionRepository: Repository<ScheduleExceptionEntity>,
     private readonly dataSource: DataSource,
     private readonly barbersService: BarbersService,
     private readonly servicesService: ServicesService,
     private readonly telegramService: TelegramService,
   ) {}
 
-  async getBooking(id: string) {
-    const booking = await this.bookingRepository.findOne({ where: { id } });
-    if (!booking) {
-      throw new NotFoundException("Booking not found");
-    }
-
-    return booking;
+  async getPublicBooking(id: string, token: string) {
+    const booking = await this.authorizePublicAccess(id, token);
+    return this.serializeBooking(booking);
   }
 
   async listAdminBookings(query: ListAdminBookingsQueryDto) {
@@ -61,20 +72,23 @@ export class BookingsService {
       qb.andWhere("booking.status = :status", { status: query.status });
     }
 
+    if (query.search) {
+      const search = `%${query.search.trim().toLowerCase()}%`;
+      qb.andWhere(
+        `(LOWER(booking.client_name) LIKE :search OR LOWER(booking.client_phone) LIKE :search OR LOWER(COALESCE(booking.notes, '')) LIKE :search)`,
+        { search },
+      );
+    }
+
     return qb.getMany();
   }
 
   async getAvailableSlots(barberId: string, query: GetSlotsQueryDto) {
     await this.barbersService.getOrFail(barberId);
     const service = await this.servicesService.getOrFail(query.serviceId);
+    const workWindow = await this.getWorkWindow(barberId, query.date);
 
-    const date = new Date(`${query.date}T00:00:00`);
-    const dayOfWeek = date.getDay();
-    const schedule = await this.scheduleRepository.findOne({
-      where: { barberId, dayOfWeek },
-    });
-
-    if (!schedule || schedule.isDayOff || !schedule.startTime || !schedule.endTime) {
+    if (!workWindow) {
       return {
         date: query.date,
         barberId,
@@ -84,20 +98,18 @@ export class BookingsService {
     }
 
     const { dayStart, dayEnd } = this.getDateBounds(query.date);
-    const bookings = await this.bookingRepository.find({
-      where: {
-        barberId,
-        status: Not(BookingStatus.Canceled),
-      },
-    });
-
-    const busyBookings = bookings.filter(
-      (booking) => booking.startTime < dayEnd && booking.endTime > dayStart,
-    );
+    const busyBookings = await this.bookingRepository
+      .createQueryBuilder("booking")
+      .where("booking.barber_id = :barberId", { barberId })
+      .andWhere("booking.status <> :canceled", { canceled: BookingStatus.Canceled })
+      .andWhere("booking.start_time < :dayEnd", { dayEnd })
+      .andWhere("booking.end_time > :dayStart", { dayStart })
+      .getMany();
 
     const slots = this.generateSlots({
       date: query.date,
-      schedule,
+      startTime: workWindow.startTime,
+      endTime: workWindow.endTime,
       durationMin: service.durationMin,
       busyBookings,
     });
@@ -110,7 +122,11 @@ export class BookingsService {
     };
   }
 
-  async createBooking(dto: CreateBookingDto) {
+  async createBooking(dto: CreateBookingDto, options?: { defaultStatus?: BookingStatus }) {
+    if (dto.website?.trim()) {
+      throw new BadRequestException("Spam protection triggered");
+    }
+
     const barber = await this.barbersService.getOrFail(dto.barberId);
     if (!barber.isActive) {
       throw new BadRequestException("Selected barber is inactive");
@@ -124,6 +140,8 @@ export class BookingsService {
     const startTime = new Date(dto.startTime);
     const endTime = new Date(startTime.getTime() + service.durationMin * 60_000);
     await this.ensureWithinSchedule(dto.barberId, startTime, endTime);
+    const managementToken = this.generateManageToken();
+    const defaultStatus = options?.defaultStatus ?? BookingStatus.Pending;
 
     try {
       const booking = await this.dataSource.transaction("SERIALIZABLE", async (manager) => {
@@ -144,20 +162,111 @@ export class BookingsService {
           serviceId: dto.serviceId,
           clientName: dto.clientName,
           clientPhone: dto.clientPhone,
-          clientTelegramUsername: this.normalizeTelegramUsername(dto.clientTelegramUsername),
+          clientTelegramUsername: normalizeTelegramUsername(dto.clientTelegramUsername),
+          clientManageToken: managementToken,
           startTime,
           endTime,
           notes: dto.notes ?? null,
-          status: BookingStatus.Pending,
+          status: defaultStatus,
+          cancellationReason: null,
+          reminder24hSentAt: null,
+          reminder2hSentAt: null,
         });
 
         return manager.save(entity);
       });
 
-      const hydrated = await this.getBooking(booking.id);
+      const hydrated = await this.getBookingOrFail(booking.id);
       await this.telegramService.sendNewBookingAlert(hydrated);
       await this.telegramService.sendClientBookingAlert(hydrated);
-      return hydrated;
+      return {
+        ...this.serializeBooking(hydrated),
+        managementToken,
+      };
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+
+      const code = (error as { code?: string }).code;
+      if (code === "23P01" || code === "40001") {
+        throw new ConflictException("This slot is already booked");
+      }
+
+      throw error;
+    }
+  }
+
+  async createAdminBooking(dto: CreateAdminBookingDto) {
+    return this.createBooking(dto, {
+      defaultStatus:
+        dto.status === BookingStatus.Canceled || dto.status === BookingStatus.Completed
+          ? BookingStatus.Confirmed
+          : dto.status ?? BookingStatus.Confirmed,
+    });
+  }
+
+  async cancelBooking(id: string, dto: CancelBookingDto) {
+    const booking = await this.authorizePublicAccess(id, dto.token);
+    if (booking.status === BookingStatus.Completed) {
+      throw new BadRequestException("Completed bookings cannot be canceled");
+    }
+
+    if (booking.status === BookingStatus.Canceled) {
+      return this.serializeBooking(booking);
+    }
+
+    booking.status = BookingStatus.Canceled;
+    booking.cancellationReason = dto.reason?.trim() || null;
+    const saved = await this.bookingRepository.save(booking);
+    await this.telegramService.sendStatusUpdateAlert(saved);
+    await this.telegramService.sendClientStatusUpdate(saved);
+    return this.serializeBooking(saved);
+  }
+
+  async rescheduleBooking(id: string, dto: RescheduleBookingDto) {
+    const existing = await this.authorizePublicAccess(id, dto.token);
+    if (existing.status === BookingStatus.Canceled || existing.status === BookingStatus.Completed) {
+      throw new BadRequestException("This booking can no longer be rescheduled");
+    }
+
+    const barber = await this.barbersService.getOrFail(existing.barberId);
+    const service = await this.servicesService.getOrFail(existing.serviceId);
+    if (!barber.isActive || !service.isActive) {
+      throw new BadRequestException("This booking cannot be rescheduled right now");
+    }
+
+    const startTime = new Date(dto.startTime);
+    const endTime = new Date(startTime.getTime() + service.durationMin * 60_000);
+    await this.ensureWithinSchedule(existing.barberId, startTime, endTime);
+
+    try {
+      const booking = await this.dataSource.transaction("SERIALIZABLE", async (manager) => {
+        const overlapCount = await manager
+          .createQueryBuilder(BookingEntity, "booking")
+          .where("booking.barber_id = :barberId", { barberId: existing.barberId })
+          .andWhere("booking.id <> :bookingId", { bookingId: existing.id })
+          .andWhere("booking.status <> :canceled", { canceled: BookingStatus.Canceled })
+          .andWhere("booking.start_time < :endTime", { endTime })
+          .andWhere("booking.end_time > :startTime", { startTime })
+          .getCount();
+
+        if (overlapCount > 0) {
+          throw new ConflictException("This slot is already booked");
+        }
+
+        existing.startTime = startTime;
+        existing.endTime = endTime;
+        existing.cancellationReason = null;
+        existing.reminder24hSentAt = null;
+        existing.reminder2hSentAt = null;
+        return manager.save(existing);
+      });
+
+      const hydrated = await this.getBookingOrFail(booking.id);
+      await this.telegramService.sendRescheduleAlert(hydrated);
+      await this.telegramService.sendClientRescheduleAlert(hydrated);
+      return this.serializeBooking(hydrated);
     } catch (error) {
       if (error instanceof ConflictException) {
         throw error;
@@ -173,7 +282,7 @@ export class BookingsService {
   }
 
   async updateStatus(id: string, dto: UpdateBookingStatusDto) {
-    const booking = await this.getBooking(id);
+    const booking = await this.getBookingOrFail(id);
     booking.status = dto.status;
     const saved = await this.bookingRepository.save(booking);
     await this.telegramService.sendStatusUpdateAlert(saved);
@@ -181,13 +290,32 @@ export class BookingsService {
     return saved;
   }
 
-  private normalizeTelegramUsername(username?: string) {
-    if (!username) {
-      return null;
+  private async getBookingOrFail(id: string, withManageToken = false) {
+    const qb = this.bookingRepository
+      .createQueryBuilder("booking")
+      .leftJoinAndSelect("booking.barber", "barber")
+      .leftJoinAndSelect("booking.service", "service")
+      .where("booking.id = :id", { id });
+
+    if (withManageToken) {
+      qb.addSelect("booking.clientManageToken");
     }
 
-    const normalized = username.trim().replace(/^@+/, "").toLowerCase();
-    return normalized.length > 0 ? normalized : null;
+    const booking = await qb.getOne();
+    if (!booking) {
+      throw new NotFoundException("Booking not found");
+    }
+
+    return booking;
+  }
+
+  private async authorizePublicAccess(id: string, token: string) {
+    const booking = await this.getBookingOrFail(id, true);
+    if (booking.clientManageToken !== token.trim()) {
+      throw new UnauthorizedException("Invalid booking token");
+    }
+
+    return booking;
   }
 
   private getDateBounds(date: string) {
@@ -197,31 +325,60 @@ export class BookingsService {
   }
 
   private async ensureWithinSchedule(barberId: string, startTime: Date, endTime: Date) {
-    const dateString = this.formatDate(startTime);
-    const dayOfWeek = startTime.getDay();
-    const schedule = await this.scheduleRepository.findOne({
-      where: { barberId, dayOfWeek },
-    });
+    const dateString = formatDatePart(startTime);
+    const workWindow = await this.getWorkWindow(barberId, dateString);
 
-    if (!schedule || schedule.isDayOff || !schedule.startTime || !schedule.endTime) {
+    if (!workWindow) {
       throw new BadRequestException("Barber does not work on the selected date");
     }
 
-    const scheduleStart = this.combineDateAndTime(dateString, schedule.startTime);
-    const scheduleEnd = this.combineDateAndTime(dateString, schedule.endTime);
+    const scheduleStart = combineDateAndTime(dateString, workWindow.startTime);
+    const scheduleEnd = combineDateAndTime(dateString, workWindow.endTime);
     if (startTime < scheduleStart || endTime > scheduleEnd) {
       throw new BadRequestException("Booking is outside working hours");
     }
   }
 
+  private async getWorkWindow(barberId: string, date: string) {
+    const exception = await this.scheduleExceptionRepository.findOne({
+      where: { barberId, date },
+    });
+
+    if (exception) {
+      if (exception.isDayOff || !isPositiveRange(exception.startTime, exception.endTime)) {
+        return null;
+      }
+
+      return {
+        startTime: exception.startTime as string,
+        endTime: exception.endTime as string,
+      };
+    }
+
+    const dayOfWeek = new Date(`${date}T00:00:00`).getDay();
+    const schedule = await this.scheduleRepository.findOne({
+      where: { barberId, dayOfWeek },
+    });
+
+    if (!schedule || schedule.isDayOff || !isPositiveRange(schedule.startTime, schedule.endTime)) {
+      return null;
+    }
+
+    return {
+      startTime: schedule.startTime as string,
+      endTime: schedule.endTime as string,
+    };
+  }
+
   private generateSlots(params: {
     date: string;
-    schedule: WorkScheduleEntity;
+    startTime: string;
+    endTime: string;
     durationMin: number;
     busyBookings: BookingEntity[];
   }) {
-    const scheduleStart = this.combineDateAndTime(params.date, params.schedule.startTime as string);
-    const scheduleEnd = this.combineDateAndTime(params.date, params.schedule.endTime as string);
+    const scheduleStart = combineDateAndTime(params.date, params.startTime);
+    const scheduleEnd = combineDateAndTime(params.date, params.endTime);
     const nowThreshold = new Date(Date.now() + 30 * 60_000);
 
     const slots: string[] = [];
@@ -235,7 +392,7 @@ export class BookingsService {
       );
 
       if (!hasConflict && slotStart >= nowThreshold) {
-        slots.push(this.formatDateTime(slotStart));
+        slots.push(formatDateTime(slotStart));
       }
 
       cursor = new Date(cursor.getTime() + SLOT_STEP_MINUTES * 60_000);
@@ -244,35 +401,26 @@ export class BookingsService {
     return slots;
   }
 
-  private combineDateAndTime(date: string, time: string) {
-    const normalizedTime = this.normalizeTime(time);
-    return new Date(`${date}T${normalizedTime}`);
+  private serializeBooking(booking: BookingEntity) {
+    return {
+      id: booking.id,
+      barberId: booking.barberId,
+      serviceId: booking.serviceId,
+      clientName: booking.clientName,
+      clientPhone: booking.clientPhone,
+      clientTelegramUsername: booking.clientTelegramUsername,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      status: booking.status,
+      notes: booking.notes,
+      cancellationReason: booking.cancellationReason,
+      createdAt: booking.createdAt,
+      barber: booking.barber,
+      service: booking.service,
+    };
   }
 
-  private normalizeTime(time: string) {
-    const trimmed = time.trim();
-    if (/^\d{2}:\d{2}$/.test(trimmed)) {
-      return `${trimmed}:00`;
-    }
-
-    if (/^\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
-      return trimmed;
-    }
-
-    throw new BadRequestException(`Invalid time format: ${time}`);
-  }
-
-  private formatDate(date: Date) {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, "0");
-    const day = `${date.getDate()}`.padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  private formatDateTime(date: Date) {
-    const datePart = this.formatDate(date);
-    const hours = `${date.getHours()}`.padStart(2, "0");
-    const minutes = `${date.getMinutes()}`.padStart(2, "0");
-    return `${datePart}T${hours}:${minutes}:00`;
+  private generateManageToken() {
+    return randomBytes(24).toString("hex");
   }
 }

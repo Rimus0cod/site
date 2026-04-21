@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminBarbers } from "../../api/barbers";
-import { useSaveSchedule, useSchedule } from "../../api/admin";
+import {
+  useSaveSchedule,
+  useSaveScheduleExceptions,
+  useSchedule,
+  useScheduleExceptions,
+} from "../../api/admin";
+import { ScheduleExceptionsEditor } from "../../components/admin/ScheduleExceptionsEditor";
 import { ScheduleGrid } from "../../components/admin/ScheduleGrid";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import type { ScheduleDay } from "../../lib/types";
+import type { ScheduleDay, ScheduleException } from "../../lib/types";
 import { normalizeTimeValue } from "../../lib/utils";
 
 const defaultDays: ScheduleDay[] = Array.from({ length: 7 }, (_, dayOfWeek) => ({
@@ -24,8 +30,11 @@ export function SchedulePage() {
   const barberId = params.get("barberId") ?? undefined;
   const { data: barbers } = useAdminBarbers();
   const { data: schedule } = useSchedule(barberId);
+  const { data: exceptionsResponse } = useScheduleExceptions(barberId);
   const saveSchedule = useSaveSchedule(barberId);
+  const saveExceptions = useSaveScheduleExceptions(barberId);
   const [days, setDays] = useState<ScheduleDay[]>(getDefaultDays);
+  const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
 
   useEffect(() => {
     if (schedule?.days?.length) {
@@ -44,6 +53,10 @@ export function SchedulePage() {
 
     setDays(getDefaultDays());
   }, [schedule]);
+
+  useEffect(() => {
+    setExceptions(exceptionsResponse?.exceptions ?? []);
+  }, [exceptionsResponse]);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-6 py-12">
@@ -74,8 +87,27 @@ export function SchedulePage() {
         onClick={() => saveSchedule.mutate({ days })}
         type="button"
       >
-        {saveSchedule.isPending ? "Saving..." : "Save schedule"}
+        {saveSchedule.isPending ? "Saving..." : "Save weekly schedule"}
       </Button>
+
+      <Card className="space-y-5">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">Overrides</p>
+          <h2 className="font-display text-3xl text-brand-ink">Specific date exceptions</h2>
+          <p className="text-sm text-brand-ink/70">
+            Use exceptions for vacations, holidays, trainings, or one-off extended shifts.
+          </p>
+        </div>
+        <ScheduleExceptionsEditor exceptions={exceptions} onChange={setExceptions} />
+        <Button
+          className="w-fit bg-brand-sand"
+          disabled={!barberId || saveExceptions.isPending}
+          onClick={() => saveExceptions.mutate({ exceptions })}
+          type="button"
+        >
+          {saveExceptions.isPending ? "Saving..." : "Save exceptions"}
+        </Button>
+      </Card>
     </main>
   );
 }

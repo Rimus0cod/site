@@ -1,44 +1,34 @@
 import "reflect-metadata";
 import * as bcrypt from "bcrypt";
-import { DataSource } from "typeorm";
-import configuration from "../config/configuration";
 import { AdminEntity } from "../common/entities/admin.entity";
+import AppDataSource from "./data-source";
 
 async function seedAdmin() {
-  const config = configuration();
-  const dataSource = new DataSource({
-    type: "postgres",
-    host: config.database.host,
-    port: config.database.port,
-    username: config.database.user,
-    password: config.database.password,
-    database: config.database.name,
-    entities: [AdminEntity],
-    synchronize: true,
-  });
-
-  await dataSource.initialize();
-  const repository = dataSource.getRepository(AdminEntity);
+  await AppDataSource.initialize();
+  await AppDataSource.runMigrations();
+  const repository = AppDataSource.getRepository(AdminEntity);
+  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@barberbook.local";
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "ChangeMe123!";
 
   const existing = await repository.findOne({
-    where: { email: config.admin.email },
+    where: { email: adminEmail },
   });
 
   if (existing) {
-    await dataSource.destroy();
+    await AppDataSource.destroy();
     return;
   }
 
-  const passwordHash = await bcrypt.hash(config.admin.password, 10);
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
   await repository.save(
     repository.create({
-      email: config.admin.email,
+      email: adminEmail,
       passwordHash,
       role: "admin",
     }),
   );
 
-  await dataSource.destroy();
+  await AppDataSource.destroy();
 }
 
 seedAdmin().catch((error) => {

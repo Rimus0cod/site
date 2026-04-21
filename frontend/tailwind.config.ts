@@ -6,19 +6,21 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          ink: "#12100d",
-          sand: "#efe3d2",
-          clay: "#cb8f54",
-          olive: "#576246",
-          cream: "#fff8ef",
+          ink: "rgb(var(--color-ink) / <alpha-value>)",
+          sand: "rgb(var(--color-sand) / <alpha-value>)",
+          clay: "rgb(var(--color-clay) / <alpha-value>)",
+          olive: "rgb(var(--color-olive) / <alpha-value>)",
+          cream: "rgb(var(--color-cream) / <alpha-value>)",
+          panel: "rgb(var(--color-panel) / <alpha-value>)",
+          line: "rgb(var(--color-line) / <alpha-value>)",
         },
       },
       fontFamily: {
-        display: ["Georgia", "serif"],
-        body: ["Trebuchet MS", "Verdana", "sans-serif"],
+        display: ['"Cormorant Garamond"', "Georgia", "serif"],
+        body: ['"Manrope"', '"Segoe UI"', "sans-serif"],
       },
       boxShadow: {
-        card: "0 18px 40px rgba(18, 16, 13, 0.12)",
+        card: "0 24px 60px rgba(15, 16, 20, 0.18)",
       },
     },
   },
@@ -26,4 +28,3 @@ const config: Config = {
 };
 
 export default config;
-

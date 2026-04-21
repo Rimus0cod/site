@@ -20,9 +20,13 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
+    environment:
+      NODE_ENV: production
+      DB_SYNCHRONIZE: "false"
     depends_on:
       - postgres
       - redis
+    command: sh -c "npm run migration:run && npm run start:dev"
     expose:
       - "3001"
 
@@ -45,4 +49,3 @@ services:
 
 volumes:
   pgdata:
-

@@ -24,11 +24,22 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
           </tr>
         </thead>
         <tbody className="align-top">
+          {bookings.length === 0 ? (
+            <tr>
+              <td className="py-6 text-brand-ink/60" colSpan={6}>
+                No bookings match the selected filters.
+              </td>
+            </tr>
+          ) : null}
           {bookings.map((booking) => (
             <tr key={booking.id} className="border-t border-brand-ink/10">
               <td className="py-4">
                 <div className="font-semibold text-brand-ink">{booking.clientName}</div>
                 <div className="text-brand-ink/60">{booking.clientPhone}</div>
+                {booking.notes ? <div className="mt-1 text-brand-ink/50">Note: {booking.notes}</div> : null}
+                {booking.cancellationReason ? (
+                  <div className="mt-1 text-rose-600">Reason: {booking.cancellationReason}</div>
+                ) : null}
               </td>
               <td className="py-4">{booking.service?.name ?? "Unknown service"}</td>
               <td className="py-4">{booking.barber?.name ?? "Unknown barber"}</td>
@@ -41,7 +52,12 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
                   {actions.map((status) => (
                     <Button
                       key={status}
-                      className="bg-brand-sand px-3 py-2 text-xs"
+                      className={
+                        booking.status === status
+                          ? "bg-brand-olive px-3 py-2 text-xs text-white"
+                          : "bg-brand-sand px-3 py-2 text-xs"
+                      }
+                      disabled={updateStatus.isPending}
                       onClick={() => updateStatus.mutate({ id: booking.id, status })}
                       type="button"
                     >
@@ -57,4 +73,3 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
     </Card>
   );
 }
-

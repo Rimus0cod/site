@@ -47,6 +47,14 @@ export class BookingEntity {
   })
   clientTelegramUsername!: string | null;
 
+  @Column({
+    name: "client_manage_token",
+    length: 64,
+    unique: true,
+    select: false,
+  })
+  clientManageToken!: string;
+
   @Column({ name: "start_time", type: "timestamp" })
   startTime!: Date;
 
@@ -58,6 +66,15 @@ export class BookingEntity {
 
   @Column({ type: "text", nullable: true })
   notes!: string | null;
+
+  @Column({ name: "cancellation_reason", type: "text", nullable: true })
+  cancellationReason!: string | null;
+
+  @Column({ name: "reminder_24h_sent_at", type: "timestamp", nullable: true })
+  reminder24hSentAt!: Date | null;
+
+  @Column({ name: "reminder_2h_sent_at", type: "timestamp", nullable: true })
+  reminder2hSentAt!: Date | null;
 
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;

@@ -41,5 +41,17 @@ export class AuthService {
       },
     };
   }
-}
 
+  async getAdminProfile(id: string) {
+    const admin = await this.adminRepository.findOne({ where: { id } });
+    if (!admin) {
+      throw new UnauthorizedException("Admin session is invalid");
+    }
+
+    return {
+      id: admin.id,
+      email: admin.email,
+      role: admin.role,
+    };
+  }
+}

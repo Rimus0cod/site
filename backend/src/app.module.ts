@@ -8,6 +8,9 @@ import { ServicesModule } from "./services/services.module";
 import { ScheduleModule } from "./schedule/schedule.module";
 import { BookingsModule } from "./bookings/bookings.module";
 import { TelegramModule } from "./telegram/telegram.module";
+import { DATABASE_ENTITIES } from "./database/entities";
+import { DATABASE_MIGRATIONS } from "./database/migrations";
+import { HealthModule } from "./health/health.module";
 
 @Module({
   imports: [
@@ -26,8 +29,9 @@ import { TelegramModule } from "./telegram/telegram.module";
         username: configService.get<string>("database.user"),
         password: configService.get<string>("database.password"),
         database: configService.get<string>("database.name"),
-        autoLoadEntities: true,
-        synchronize: configService.get<string>("app.nodeEnv") !== "production",
+        entities: DATABASE_ENTITIES,
+        migrations: DATABASE_MIGRATIONS,
+        synchronize: configService.get<boolean>("database.synchronize") ?? false,
       }),
     }),
     AuthModule,
@@ -36,7 +40,7 @@ import { TelegramModule } from "./telegram/telegram.module";
     ScheduleModule,
     BookingsModule,
     TelegramModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
-

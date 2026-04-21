@@ -1,20 +1,48 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color: #0d0b08;
-  background: #fff8ef;
-  font-family: "Trebuchet MS", Verdana, sans-serif;
+  --color-ink: 20 24 30;
+  --color-sand: 236 222 204;
+  --color-clay: 208 134 76;
+  --color-olive: 114 132 102;
+  --color-cream: 247 241 232;
+  --color-panel: 255 255 255;
+  --color-line: 20 24 30;
+  color: rgb(var(--color-ink));
+  background: rgb(var(--color-cream));
+  font-family: "Manrope", "Segoe UI", sans-serif;
+}
+
+:root[data-theme="dark"] {
+  --color-ink: 240 232 220;
+  --color-sand: 76 63 48;
+  --color-clay: 226 163 93;
+  --color-olive: 143 166 124;
+  --color-cream: 15 18 23;
+  --color-panel: 25 29 36;
+  --color-line: 255 255 255;
+}
+
+html {
+  background: rgb(var(--color-cream));
 }
 
 body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at top left, rgba(203, 143, 84, 0.22), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(87, 98, 70, 0.18), transparent 32%),
-    linear-gradient(180deg, #fff8ef 0%, #f4eadb 100%);
+    radial-gradient(circle at top left, rgba(208, 134, 76, 0.18), transparent 30%),
+    radial-gradient(circle at 80% 15%, rgba(114, 132, 102, 0.14), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(208, 134, 76, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(var(--color-cream), 1) 0%, rgba(var(--color-sand), 0.42) 100%);
+  color: rgb(var(--color-ink));
+  transition:
+    background 200ms ease,
+    color 200ms ease;
 }
 
 a {
@@ -31,12 +59,12 @@ input,
 textarea,
 select,
 button {
-  color: #0d0b08;
+  color: rgb(var(--color-ink));
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: rgba(13, 11, 8, 0.48);
+  color: rgba(var(--color-ink), 0.48);
 }
 
 input[type="date"]::-webkit-datetime-edit,
@@ -48,10 +76,14 @@ input[type="date"]::-webkit-datetime-edit-day-field,
 input[type="date"]::-webkit-datetime-edit-year-field,
 input[type="time"]::-webkit-datetime-edit-hour-field,
 input[type="time"]::-webkit-datetime-edit-minute-field {
-  color: #0d0b08;
+  color: rgb(var(--color-ink));
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   opacity: 0.85;
+}
+
+#root {
+  min-height: 100vh;
 }

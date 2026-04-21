@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { BookingEntity } from "../bookings/booking.entity";
+import { ScheduleExceptionEntity } from "../schedule/schedule-exception.entity";
 import { WorkScheduleEntity } from "../schedule/work-schedule.entity";
 
 @Entity({ name: "barbers" })
@@ -33,5 +34,7 @@ export class BarberEntity {
 
   @OneToMany(() => WorkScheduleEntity, (schedule) => schedule.barber)
   schedules!: WorkScheduleEntity[];
-}
 
+  @OneToMany(() => ScheduleExceptionEntity, (exception) => exception.barber)
+  scheduleExceptions!: ScheduleExceptionEntity[];
+}

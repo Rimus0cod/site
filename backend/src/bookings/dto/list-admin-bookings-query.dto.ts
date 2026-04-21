@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsUUID, Matches } from "class-validator";
+import { IsEnum, IsOptional, IsString, IsUUID, Matches, MaxLength } from "class-validator";
 import { BookingStatus } from "../../common/enums/booking-status.enum";
 
 export class ListAdminBookingsQueryDto {
@@ -13,4 +13,9 @@ export class ListAdminBookingsQueryDto {
   @IsOptional()
   @IsEnum(BookingStatus)
   status?: BookingStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  search?: string;
 }

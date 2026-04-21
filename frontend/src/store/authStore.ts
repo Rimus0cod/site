@@ -6,6 +6,7 @@ interface AuthStoreState {
   accessToken: string | null;
   admin: AdminUser | null;
   setSession: (payload: { accessToken: string; admin: AdminUser }) => void;
+  setAdmin: (admin: AdminUser) => void;
   clearSession: () => void;
 }
 
@@ -15,6 +16,7 @@ export const useAuthStore = create<AuthStoreState>()(
       accessToken: null,
       admin: null,
       setSession: ({ accessToken, admin }) => set({ accessToken, admin }),
+      setAdmin: (admin) => set((state) => ({ ...state, admin })),
       clearSession: () => set({ accessToken: null, admin: null }),
     }),
     {
@@ -23,4 +25,3 @@ export const useAuthStore = create<AuthStoreState>()(
     },
   ),
 );
-

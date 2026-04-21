@@ -1,5 +1,15 @@
-import { Body, Controller, HttpCode, Post, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import { Response } from "express";
+import { JwtAuthGuard } from "./jwt-auth.guard";
 import { LoginDto } from "./dto/login.dto";
 import { AuthService } from "./auth.service";
 
@@ -21,5 +31,27 @@ export class AuthController {
     });
 
     return result;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("me")
+  async me(@Req() request: { user: { id: string } }) {
+    return {
+      admin: await this.authService.getAdminProfile(request.user.id),
+    };
+  }
+
+  @Post("logout")
+  @HttpCode(200)
+  logout(@Res({ passthrough: true }) response: Response) {
+    const isProduction = process.env.NODE_ENV === "production";
+
+    response.clearCookie("access_token", {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: isProduction,
+    });
+
+    return { success: true };
   }
 }

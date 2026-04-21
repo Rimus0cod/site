@@ -2,6 +2,9 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { BarbersService } from "../barbers/barbers.service";
+import { isPositiveRange } from "../bookings/booking-rules";
+import { ScheduleExceptionEntity } from "./schedule-exception.entity";
+import { UpdateScheduleExceptionsDto } from "./dto/update-schedule-exceptions.dto";
 import { UpdateScheduleDto } from "./dto/update-schedule.dto";
 import { WorkScheduleEntity } from "./work-schedule.entity";
 
@@ -10,6 +13,8 @@ export class ScheduleService {
   constructor(
     @InjectRepository(WorkScheduleEntity)
     private readonly scheduleRepository: Repository<WorkScheduleEntity>,
+    @InjectRepository(ScheduleExceptionEntity)
+    private readonly scheduleExceptionRepository: Repository<ScheduleExceptionEntity>,
     private readonly barbersService: BarbersService,
   ) {}
 
@@ -27,6 +32,20 @@ export class ScheduleService {
     };
   }
 
+  async getBarberScheduleExceptions(barberId: string) {
+    await this.barbersService.getOrFail(barberId);
+
+    const exceptions = await this.scheduleExceptionRepository.find({
+      where: { barberId },
+      order: { date: "ASC" },
+    });
+
+    return {
+      barberId,
+      exceptions,
+    };
+  }
+
   async replaceSchedule(barberId: string, dto: UpdateScheduleDto) {
     await this.barbersService.getOrFail(barberId);
 
@@ -39,6 +58,10 @@ export class ScheduleService {
 
       if (!day.isDayOff && (!day.startTime || !day.endTime)) {
         throw new BadRequestException("Working day requires startTime and endTime");
+      }
+
+      if (!day.isDayOff && !isPositiveRange(day.startTime, day.endTime)) {
+        throw new BadRequestException("Working day requires endTime after startTime");
       }
     }
 
@@ -59,5 +82,42 @@ export class ScheduleService {
       days: saved.sort((left, right) => left.dayOfWeek - right.dayOfWeek),
     };
   }
-}
 
+  async replaceScheduleExceptions(barberId: string, dto: UpdateScheduleExceptionsDto) {
+    await this.barbersService.getOrFail(barberId);
+
+    const dateSet = new Set<string>();
+    for (const exception of dto.exceptions) {
+      if (dateSet.has(exception.date)) {
+        throw new BadRequestException("Schedule exceptions contain duplicate dates");
+      }
+      dateSet.add(exception.date);
+
+      if (!exception.isDayOff && (!exception.startTime || !exception.endTime)) {
+        throw new BadRequestException("Working exception requires startTime and endTime");
+      }
+
+      if (!exception.isDayOff && !isPositiveRange(exception.startTime, exception.endTime)) {
+        throw new BadRequestException("Exception endTime must be after startTime");
+      }
+    }
+
+    await this.scheduleExceptionRepository.delete({ barberId });
+    const entities = dto.exceptions.map((exception) =>
+      this.scheduleExceptionRepository.create({
+        barberId,
+        date: exception.date,
+        startTime: exception.isDayOff ? null : exception.startTime ?? null,
+        endTime: exception.isDayOff ? null : exception.endTime ?? null,
+        isDayOff: exception.isDayOff ?? false,
+        note: exception.note?.trim() || null,
+      }),
+    );
+
+    const saved = await this.scheduleExceptionRepository.save(entities);
+    return {
+      barberId,
+      exceptions: saved.sort((left, right) => left.date.localeCompare(right.date)),
+    };
+  }
+}

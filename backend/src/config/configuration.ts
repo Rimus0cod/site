@@ -12,6 +12,7 @@ export default () => ({
     name: process.env.DB_NAME ?? "barbershop",
     user: process.env.DB_USER ?? "barber",
     password: process.env.DB_PASSWORD ?? "secret",
+    synchronize: process.env.DB_SYNCHRONIZE === "true",
   },
   redis: {
     host: process.env.REDIS_HOST ?? "redis",
@@ -39,6 +40,7 @@ export const envValidationSchema = Joi.object({
   DB_NAME: Joi.string().required(),
   DB_USER: Joi.string().required(),
   DB_PASSWORD: Joi.string().allow("").required(),
+  DB_SYNCHRONIZE: Joi.boolean().truthy("true").falsy("false").optional(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().default(6379),
   JWT_SECRET: Joi.string().min(16).required(),
@@ -49,4 +51,3 @@ export const envValidationSchema = Joi.object({
   TELEGRAM_ADMIN_CHAT_ID: Joi.string().allow(""),
   FRONTEND_URL: Joi.string().uri().required(),
 });
-

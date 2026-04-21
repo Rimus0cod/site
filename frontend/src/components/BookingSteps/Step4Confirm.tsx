@@ -2,7 +2,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useCreateBooking } from "../../api/bookings";
+import { getContent } from "../../lib/content";
 import { useBookingStore } from "../../store/bookingStore";
+import { usePreferencesStore } from "../../store/preferencesStore";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Input } from "../ui/Input";
@@ -20,15 +22,18 @@ const schema = z.object({
       message: "Use a valid Telegram username",
     }),
   notes: z.string().optional(),
+  website: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 interface Props {
-  onSuccess: (bookingId: string) => void;
+  onSuccess: (payload: { bookingId: string; managementToken: string }) => void;
 }
 
 export function Step4Confirm({ onSuccess }: Props) {
+  const language = usePreferencesStore((state) => state.language);
+  const copy = getContent(language);
   const selectedBarber = useBookingStore((state) => state.selectedBarber);
   const selectedService = useBookingStore((state) => state.selectedService);
   const selectedSlot = useBookingStore((state) => state.selectedSlot);
@@ -38,8 +43,16 @@ export function Step4Confirm({ onSuccess }: Props) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: contact,
+    defaultValues: {
+      ...contact,
+      website: "",
+    },
   });
+
+  const telegramError =
+    form.formState.errors.clientTelegramUsername?.message === "Use a valid Telegram username"
+      ? copy.booking.invalidTelegram
+      : form.formState.errors.clientTelegramUsername?.message;
 
   const handleSubmit = form.handleSubmit(async (values) => {
     if (!selectedBarber || !selectedService || !selectedSlot) {
@@ -61,36 +74,45 @@ export function Step4Confirm({ onSuccess }: Props) {
       clientTelegramUsername: values.clientTelegramUsername || undefined,
       startTime: selectedSlot,
       notes: values.notes,
+      website: values.website,
     });
 
-    onSuccess(booking.id);
+    onSuccess({
+      bookingId: booking.id,
+      managementToken: booking.managementToken ?? "",
+    });
   });
 
   return (
     <Card className="space-y-5">
       <div className="space-y-2">
-        <h3 className="font-display text-2xl text-brand-ink">Contact details</h3>
-        <p className="text-sm text-brand-ink/70">
-          Leave your Telegram username too, and the bot will try to send your booking details there.
-        </p>
+        <h3 className="font-display text-2xl text-brand-ink">{copy.booking.contactTitle}</h3>
+        <p className="text-sm text-brand-ink/70">{copy.booking.contactDescription}</p>
       </div>
       <form className="grid gap-4" onSubmit={handleSubmit}>
-        <Input placeholder="Client name" {...form.register("clientName")} />
-        <Input placeholder="Phone number" {...form.register("clientPhone")} />
-        <Input placeholder="Telegram username, for example @yourname" {...form.register("clientTelegramUsername")} />
+        <div className="absolute left-[-9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
+          <Input
+            autoComplete="off"
+            tabIndex={-1}
+            placeholder="Leave this field empty"
+            {...form.register("website")}
+          />
+        </div>
+        <Input placeholder={copy.booking.placeholderName} {...form.register("clientName")} />
+        <Input placeholder={copy.booking.placeholderPhone} {...form.register("clientPhone")} />
+        <Input placeholder={copy.booking.placeholderTelegram} {...form.register("clientTelegramUsername")} />
         {form.formState.errors.clientTelegramUsername ? (
-          <p className="text-sm text-red-600">{form.formState.errors.clientTelegramUsername.message}</p>
+          <p className="text-sm text-red-600">{telegramError}</p>
         ) : (
-          <p className="text-xs text-brand-ink/65">
-            The client should open the bot, press Start, and later can use /bookings or send "мои записи".
-          </p>
+          <p className="text-xs text-brand-ink/65">{copy.booking.telegramHint}</p>
         )}
-        <Textarea placeholder="Optional notes" {...form.register("notes")} />
+        <Textarea placeholder={copy.booking.placeholderNotes} {...form.register("notes")} />
+        <p className="text-xs text-brand-ink/60">{copy.booking.managementHint}</p>
         {createBooking.isError ? (
-          <p className="text-sm text-red-600">Unable to create booking. Try another time slot.</p>
+          <p className="text-sm text-red-600">{copy.booking.submitError}</p>
         ) : null}
         <Button disabled={createBooking.isPending} type="submit">
-          {createBooking.isPending ? "Creating..." : "Confirm booking"}
+          {createBooking.isPending ? copy.booking.submitting : copy.booking.submit}
         </Button>
       </form>
     </Card>

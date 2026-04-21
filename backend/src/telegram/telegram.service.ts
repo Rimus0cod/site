@@ -75,6 +75,42 @@ export class TelegramService implements OnModuleInit {
     );
   }
 
+  async sendRescheduleAlert(booking: BookingEntity) {
+    await this.sendMessage(
+      [
+        "Booking rescheduled",
+        `Client: ${booking.clientName}`,
+        `Phone: ${booking.clientPhone}`,
+        booking.clientTelegramUsername ? `Telegram: @${booking.clientTelegramUsername}` : null,
+        `Service: ${booking.service?.name ?? booking.serviceId}`,
+        `Barber: ${booking.barber?.name ?? booking.barberId}`,
+        `New date: ${this.formatDate(booking.startTime)}`,
+        `New time: ${this.formatTime(booking.startTime)}-${this.formatTime(booking.endTime)}`,
+        `Status: ${booking.status}`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
+  }
+
+  async sendClientRescheduleAlert(booking: BookingEntity) {
+    if (!booking.clientTelegramUsername) {
+      return;
+    }
+
+    await this.sendDirectMessage(
+      booking.clientTelegramUsername,
+      [
+        "Your booking has been rescheduled.",
+        `Service: ${booking.service?.name ?? booking.serviceId}`,
+        `Barber: ${booking.barber?.name ?? booking.barberId}`,
+        `Date: ${this.formatDate(booking.startTime)}`,
+        `Time: ${this.formatTime(booking.startTime)}-${this.formatTime(booking.endTime)}`,
+        `Status: ${booking.status}`,
+      ].join("\n"),
+    );
+  }
+
   async sendClientStatusUpdate(booking: BookingEntity) {
     if (!booking.clientTelegramUsername) {
       return;
@@ -89,6 +125,38 @@ export class TelegramService implements OnModuleInit {
         `Date: ${this.formatDate(booking.startTime)}`,
         `Time: ${this.formatTime(booking.startTime)}-${this.formatTime(booking.endTime)}`,
         `Status: ${booking.status}`,
+      ].join("\n"),
+    );
+  }
+
+  async sendUpcomingReminderAlert(booking: BookingEntity, label: string) {
+    await this.sendMessage(
+      [
+        `Upcoming booking in ${label}`,
+        `Client: ${booking.clientName}`,
+        `Phone: ${booking.clientPhone}`,
+        `Service: ${booking.service?.name ?? booking.serviceId}`,
+        `Barber: ${booking.barber?.name ?? booking.barberId}`,
+        `Date: ${this.formatDate(booking.startTime)}`,
+        `Time: ${this.formatTime(booking.startTime)}-${this.formatTime(booking.endTime)}`,
+        `Status: ${booking.status}`,
+      ].join("\n"),
+    );
+  }
+
+  async sendClientReminder(booking: BookingEntity, label: string) {
+    if (!booking.clientTelegramUsername) {
+      return;
+    }
+
+    await this.sendDirectMessage(
+      booking.clientTelegramUsername,
+      [
+        `Reminder: your booking starts in ${label}.`,
+        `Service: ${booking.service?.name ?? booking.serviceId}`,
+        `Barber: ${booking.barber?.name ?? booking.barberId}`,
+        `Date: ${this.formatDate(booking.startTime)}`,
+        `Time: ${this.formatTime(booking.startTime)}-${this.formatTime(booking.endTime)}`,
       ].join("\n"),
     );
   }

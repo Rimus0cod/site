@@ -10,10 +10,10 @@ export function normalizeTimeValue(value?: string | null) {
   return value.slice(0, 5);
 }
 
-export function currency(value: string | number) {
-  return new Intl.NumberFormat("en-US", {
+export function currency(value: string | number, locale = "uk-UA") {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
+    currency: "UAH",
     maximumFractionDigits: 0,
   }).format(Number(value));
 }

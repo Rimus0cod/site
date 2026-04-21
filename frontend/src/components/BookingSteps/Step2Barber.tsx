@@ -2,14 +2,18 @@ import { useBarbers } from "../../api/barbers";
 import { useBookingStore } from "../../store/bookingStore";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { getContent } from "../../lib/content";
+import { usePreferencesStore } from "../../store/preferencesStore";
 
 export function Step2Barber() {
+  const language = usePreferencesStore((state) => state.language);
+  const copy = getContent(language);
   const { data, isLoading } = useBarbers();
   const selectedBarber = useBookingStore((state) => state.selectedBarber);
   const setSelectedBarber = useBookingStore((state) => state.setSelectedBarber);
 
   if (isLoading) {
-    return <Card>Loading barbers...</Card>;
+    return <Card>{copy.booking.step2Loading}</Card>;
   }
 
   return (
@@ -21,18 +25,17 @@ export function Step2Barber() {
               {barber.name.slice(0, 1)}
             </div>
             <h3 className="font-display text-2xl text-brand-ink">{barber.name}</h3>
-            <p className="text-sm text-brand-ink/70">{barber.bio || "Experienced barber focused on precision and comfort."}</p>
+            <p className="text-sm text-brand-ink/70">{barber.bio || copy.booking.step2Fallback}</p>
           </div>
           <Button
             className={selectedBarber?.id === barber.id ? "bg-brand-olive text-white" : ""}
             onClick={() => setSelectedBarber(barber)}
             type="button"
           >
-            {selectedBarber?.id === barber.id ? "Selected" : "Choose barber"}
+            {selectedBarber?.id === barber.id ? copy.booking.step2Selected : copy.booking.step2Choose}
           </Button>
         </Card>
       ))}
     </div>
   );
 }
-

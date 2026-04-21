@@ -7,7 +7,10 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\"",
-    "seed:admin": "ts-node -r tsconfig-paths/register src/database/seed-admin.ts"
+    "seed:admin": "ts-node -r tsconfig-paths/register src/database/seed-admin.ts",
+    "migration:run": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:run",
+    "migration:revert": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:revert",
+    "test": "ts-node src/bookings/booking-rules.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
@@ -42,8 +45,8 @@
     "@types/node-telegram-bot-api": "^0.64.8",
     "@types/passport-jwt": "^4.0.1",
     "ts-node": "^10.9.2",
+    "typeorm-ts-node-commonjs": "^0.3.20",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.2"
   }
 }
-

@@ -2,6 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
 import type { Service } from "../lib/types";
 
+interface ServicePayload {
+  name?: string;
+  description?: string;
+  price?: number;
+  durationMin?: number;
+  isActive?: boolean;
+}
+
 export function useServices() {
   return useQuery({
     queryKey: ["services"],
@@ -25,7 +33,7 @@ export function useAdminServices() {
 export function useCreateService() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Partial<Service>) => {
+    mutationFn: async (payload: ServicePayload) => {
       const { data } = await apiClient.post<Service>("/admin/services", payload);
       return data;
     },
@@ -36,3 +44,17 @@ export function useCreateService() {
   });
 }
 
+export function useUpdateService() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: ServicePayload & { id: string }) => {
+      const { id, ...body } = payload;
+      const { data } = await apiClient.patch<Service>(`/admin/services/${id}`, body);
+      return data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "services"] });
+      await queryClient.invalidateQueries({ queryKey: ["services"] });
+    },
+  });
+}

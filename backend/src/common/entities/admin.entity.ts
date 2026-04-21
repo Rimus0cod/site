@@ -22,4 +22,3 @@ export class AdminEntity {
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 }
-

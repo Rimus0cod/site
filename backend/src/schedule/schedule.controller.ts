@@ -10,6 +10,7 @@ import {
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { RolesGuard } from "../common/guards/roles.guard";
+import { UpdateScheduleExceptionsDto } from "./dto/update-schedule-exceptions.dto";
 import { UpdateScheduleDto } from "./dto/update-schedule.dto";
 import { ScheduleService } from "./schedule.service";
 
@@ -26,6 +27,13 @@ export class ScheduleController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
+  @Get("admin/barbers/:id/schedule/exceptions")
+  getBarberScheduleExceptions(@Param("id", ParseUUIDPipe) barberId: string) {
+    return this.scheduleService.getBarberScheduleExceptions(barberId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
   @Put("admin/barbers/:id/schedule")
   replaceSchedule(
     @Param("id", ParseUUIDPipe) barberId: string,
@@ -33,5 +41,14 @@ export class ScheduleController {
   ) {
     return this.scheduleService.replaceSchedule(barberId, dto);
   }
-}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @Put("admin/barbers/:id/schedule/exceptions")
+  replaceScheduleExceptions(
+    @Param("id", ParseUUIDPipe) barberId: string,
+    @Body() dto: UpdateScheduleExceptionsDto,
+  ) {
+    return this.scheduleService.replaceScheduleExceptions(barberId, dto);
+  }
+}

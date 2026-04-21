@@ -36,3 +36,17 @@ export function useCreateBarber() {
   });
 }
 
+export function useUpdateBarber() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Partial<Barber> & { id: string }) => {
+      const { id, ...body } = payload;
+      const { data } = await apiClient.patch<Barber>(`/admin/barbers/${id}`, body);
+      return data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "barbers"] });
+      await queryClient.invalidateQueries({ queryKey: ["barbers"] });
+    },
+  });
+}
