@@ -18,25 +18,25 @@ export function HomePage() {
 
   return (
     <ClientShell>
-      <main className="mx-auto flex min-h-[calc(100vh-88px)] max-w-6xl flex-col gap-10 px-6 py-10">
-        <section className="grid gap-8 rounded-[2.8rem] bg-brand-ink px-8 py-12 text-brand-cream shadow-card lg:grid-cols-[1.25fr_0.75fr]">
+      <main className="mx-auto flex min-h-[calc(100vh-120px)] max-w-6xl flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-10">
+        <section className="grid gap-6 rounded-[2rem] bg-brand-ink px-5 py-6 text-brand-cream shadow-card sm:gap-8 sm:rounded-[2.8rem] sm:px-8 sm:py-12 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="space-y-6">
-            <span className="inline-flex rounded-full border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.34em] text-brand-sand">
+            <span className="inline-flex rounded-full border border-white/20 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.24em] text-brand-sand sm:px-4 sm:text-xs sm:tracking-[0.34em]">
               {copy.home.badge}
             </span>
-            <h1 className="max-w-4xl font-display text-6xl leading-[0.92] md:text-7xl">
+            <h1 className="max-w-4xl font-display text-[2.8rem] leading-[0.92] sm:text-6xl md:text-7xl">
               {copy.home.title}
             </h1>
-            <p className="max-w-2xl text-lg font-medium text-brand-cream/78">{copy.home.description}</p>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/booking">
-                <Button className="bg-brand-clay">{copy.home.primary}</Button>
+            <p className="max-w-2xl text-base font-medium text-brand-cream/78 sm:text-lg">{copy.home.description}</p>
+            <div className="grid gap-3 sm:flex sm:flex-wrap">
+              <Link className="w-full sm:w-auto" to="/booking">
+                <Button className="w-full bg-brand-clay sm:w-auto">{copy.home.primary}</Button>
               </Link>
-              <Link to="/account">
-                <Button className="bg-brand-sand">{copy.home.secondary}</Button>
+              <Link className="w-full sm:w-auto" to="/account">
+                <Button className="w-full bg-brand-sand sm:w-auto">{copy.home.secondary}</Button>
               </Link>
-              <a href={`tel:${SHOP_INFO.phone.replace(/\s+/g, "")}`}>
-                <Button className="border border-white/15 bg-white/8 text-brand-cream">
+              <a className="w-full sm:w-auto" href={`tel:${SHOP_INFO.phone.replace(/\s+/g, "")}`}>
+                <Button className="w-full border border-white/15 bg-white/8 text-brand-cream sm:w-auto">
                   {copy.home.call} {SHOP_INFO.phone}
                 </Button>
               </a>
@@ -49,7 +49,7 @@ export function HomePage() {
               ))}
             </div>
           </div>
-          <div className="grid gap-4 rounded-[2rem] border border-white/10 bg-white/6 p-6">
+          <div className="grid gap-4 rounded-[1.6rem] border border-white/10 bg-white/6 p-5 sm:rounded-[2rem] sm:p-6">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-brand-sand">{copy.home.visitUs}</p>
               <div className="mt-4 grid gap-3 text-sm font-medium text-brand-cream/82">
@@ -73,15 +73,15 @@ export function HomePage() {
         </section>
 
         <section className="space-y-4">
-          <div className="flex items-end justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.home.servicesLabel}</p>
-              <h2 className="font-display text-5xl leading-none text-brand-ink">
+              <h2 className="font-display text-4xl leading-none text-brand-ink sm:text-5xl">
                 {copy.home.servicesTitle}
               </h2>
             </div>
-            <Link to="/booking">
-              <Button className="bg-brand-sand">{copy.home.servicesCta}</Button>
+            <Link className="w-full sm:w-auto" to="/booking">
+              <Button className="w-full bg-brand-sand sm:w-auto">{copy.home.servicesCta}</Button>
             </Link>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
@@ -91,17 +91,17 @@ export function HomePage() {
                   <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-olive">
                     {service.durationMin} min
                   </p>
-                  <h2 className="font-display text-4xl leading-none text-brand-ink">{service.name}</h2>
+                  <h2 className="font-display text-3xl leading-none text-brand-ink sm:text-4xl">{service.name}</h2>
                   <p className="text-sm font-medium text-brand-ink/74">
                     {service.description || copy.home.serviceFallback}
                   </p>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-xl font-extrabold text-brand-ink">
                     {formatCurrency(service.price, language)}
                   </span>
-                  <Link to="/booking">
-                    <Button className="bg-brand-sand">{copy.home.select}</Button>
+                  <Link className="w-full sm:w-auto" to="/booking">
+                    <Button className="w-full bg-brand-sand sm:w-auto">{copy.home.select}</Button>
                   </Link>
                 </div>
               </Card>
@@ -113,7 +113,7 @@ export function HomePage() {
           <Card className="space-y-5 bg-brand-sand/42">
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.home.barbersLabel}</p>
-              <h2 className="font-display text-5xl leading-none text-brand-ink">{copy.home.barbersTitle}</h2>
+              <h2 className="font-display text-4xl leading-none text-brand-ink sm:text-5xl">{copy.home.barbersTitle}</h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {barbers?.map((barber) => (
@@ -130,7 +130,7 @@ export function HomePage() {
                     </div>
                   )}
                   <div className="mt-4 space-y-2">
-                    <h3 className="font-display text-3xl leading-none text-brand-ink">{barber.name}</h3>
+                    <h3 className="font-display text-[1.9rem] leading-none text-brand-ink sm:text-3xl">{barber.name}</h3>
                     <p className="text-sm font-medium text-brand-ink/72">
                       {barber.bio || copy.home.barberFallback}
                     </p>
@@ -143,10 +143,10 @@ export function HomePage() {
           <div className="grid gap-4">
             <Card className="space-y-4">
               <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.home.portalLabel}</p>
-              <h2 className="font-display text-4xl leading-none text-brand-ink">{copy.home.portalTitle}</h2>
+              <h2 className="font-display text-3xl leading-none text-brand-ink sm:text-4xl">{copy.home.portalTitle}</h2>
               <p className="text-sm font-medium text-brand-ink/74">{copy.home.portalText}</p>
-              <Link to="/account">
-                <Button className="bg-brand-sand">{copy.home.portalButton}</Button>
+              <Link className="w-full sm:w-auto" to="/account">
+                <Button className="w-full bg-brand-sand sm:w-auto">{copy.home.portalButton}</Button>
               </Link>
             </Card>
 

@@ -24,10 +24,10 @@ export function ClientPortalPage() {
 
   return (
     <ClientShell>
-      <main className="mx-auto flex min-h-[calc(100vh-88px)] max-w-6xl flex-col gap-6 px-6 py-10">
-        <Card className="rounded-[2.5rem] border-brand-line/10 bg-brand-ink p-8 text-brand-cream">
+      <main className="mx-auto flex min-h-[calc(100vh-120px)] max-w-6xl flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-10">
+        <Card className="rounded-[2rem] border-brand-line/10 bg-brand-ink p-5 text-brand-cream sm:rounded-[2.5rem] sm:p-8">
           <p className="text-xs uppercase tracking-[0.34em] text-brand-sand">{copy.account.badge}</p>
-          <h1 className="mt-4 max-w-3xl font-display text-5xl leading-none md:text-6xl">
+          <h1 className="mt-4 max-w-3xl font-display text-4xl leading-none sm:text-5xl md:text-6xl">
             {copy.account.title}
           </h1>
           <p className="mt-4 max-w-2xl text-base text-brand-cream/78">{copy.account.description}</p>
@@ -43,7 +43,7 @@ export function ClientPortalPage() {
                 recentAccess.map((item) => (
                   <div
                     key={item.bookingId}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-[1.6rem] border border-brand-line/10 bg-brand-cream/35 p-4"
+                    className="flex flex-col gap-3 rounded-[1.6rem] border border-brand-line/10 bg-brand-cream/35 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
                   >
                     <div className="space-y-1">
                       <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-brand-olive">
@@ -51,12 +51,12 @@ export function ClientPortalPage() {
                       </p>
                       <p className="text-sm text-brand-ink/72">{formatDateTime(item.savedAt, language)}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => openBooking(item.bookingId, item.token)} type="button">
+                    <div className="grid gap-2 sm:flex">
+                      <Button className="w-full sm:w-auto" onClick={() => openBooking(item.bookingId, item.token)} type="button">
                         {copy.account.openBooking}
                       </Button>
                       <Button
-                        className="bg-brand-sand"
+                        className="w-full bg-brand-sand sm:w-auto"
                         onClick={() => removeAccess(item.bookingId)}
                         type="button"
                       >
@@ -91,6 +91,7 @@ export function ClientPortalPage() {
               />
               <p className="text-xs text-brand-ink/65">{copy.account.helper}</p>
               <Button
+                className="w-full sm:w-auto"
                 disabled={!bookingId.trim() || !token.trim()}
                 onClick={() => openBooking(bookingId.trim(), token.trim())}
                 type="button"

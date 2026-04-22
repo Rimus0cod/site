@@ -23,13 +23,13 @@ export function BookingWizard() {
 
   return (
     <ClientShell>
-      <main className="mx-auto flex min-h-[calc(100vh-88px)] max-w-5xl flex-col gap-6 px-6 py-10">
-        <Card className="flex flex-wrap items-center justify-between gap-4 bg-brand-ink text-brand-cream">
+      <main className="mx-auto flex min-h-[calc(100vh-120px)] max-w-5xl flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-10">
+        <Card className="flex flex-col gap-4 bg-brand-ink text-brand-cream sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-brand-sand">{copy.booking.badge}</p>
-            <h1 className="font-display text-5xl leading-none">{copy.booking.title}</h1>
+            <h1 className="font-display text-4xl leading-none sm:text-5xl">{copy.booking.title}</h1>
           </div>
-          <Button className="bg-brand-sand" onClick={reset} type="button">
+          <Button className="w-full bg-brand-sand sm:w-auto" onClick={reset} type="button">
             {copy.booking.reset}
           </Button>
         </Card>

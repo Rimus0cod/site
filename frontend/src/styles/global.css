@@ -45,6 +45,27 @@ body {
     color 200ms ease;
 }
 
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(208, 134, 76, 0.16), transparent 32%),
+      radial-gradient(circle at bottom right, rgba(114, 132, 102, 0.12), transparent 34%),
+      linear-gradient(180deg, rgba(var(--color-cream), 1) 0%, rgba(var(--color-sand), 0.34) 100%);
+  }
+}
+
 a {
   color: inherit;
   text-decoration: none;

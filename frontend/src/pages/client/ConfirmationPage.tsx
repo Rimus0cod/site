@@ -81,11 +81,11 @@ export function ConfirmationPage() {
 
   return (
     <ClientShell>
-      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10">
+      <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-10">
         <Card className="space-y-6">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.confirmation.accessLabel}</p>
-            <h1 className="font-display text-5xl leading-none text-brand-ink">{copy.confirmation.title}</h1>
+            <h1 className="font-display text-4xl leading-none text-brand-ink sm:text-5xl">{copy.confirmation.title}</h1>
             <p className="text-brand-ink/70">
               {copy.confirmation.status}: {copy.status[data.status]}
             </p>
@@ -109,15 +109,15 @@ export function ConfirmationPage() {
               ) : null}
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link to="/">
-              <Button>{copy.confirmation.backHome}</Button>
+          <div className="grid gap-3 sm:flex sm:flex-wrap">
+            <Link className="w-full sm:w-auto" to="/">
+              <Button className="w-full sm:w-auto">{copy.confirmation.backHome}</Button>
             </Link>
-            <Link to="/account">
-              <Button className="bg-brand-sand">{copy.confirmation.portal}</Button>
+            <Link className="w-full sm:w-auto" to="/account">
+              <Button className="w-full bg-brand-sand sm:w-auto">{copy.confirmation.portal}</Button>
             </Link>
-            <a href={`tel:${SHOP_INFO.phone.replace(/\s+/g, "")}`}>
-              <Button className="border border-brand-line/10 bg-brand-panel">{copy.confirmation.call}</Button>
+            <a className="w-full sm:w-auto" href={`tel:${SHOP_INFO.phone.replace(/\s+/g, "")}`}>
+              <Button className="w-full border border-brand-line/10 bg-brand-panel sm:w-auto">{copy.confirmation.call}</Button>
             </a>
           </div>
           <div className="rounded-[1.5rem] border border-brand-line/10 bg-brand-sand/35 p-4 text-sm font-medium text-brand-ink/80">
@@ -129,7 +129,7 @@ export function ConfirmationPage() {
           <Card className="space-y-5">
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.confirmation.selfServiceLabel}</p>
-              <h2 className="font-display text-4xl leading-none text-brand-ink">{copy.confirmation.selfServiceTitle}</h2>
+              <h2 className="font-display text-3xl leading-none text-brand-ink sm:text-4xl">{copy.confirmation.selfServiceTitle}</h2>
               <p className="text-sm text-brand-ink/70">{copy.confirmation.selfServiceText}</p>
             </div>
 
@@ -175,7 +175,7 @@ export function ConfirmationPage() {
                     onChange={(event) => setRescheduleDate(event.target.value)}
                   />
                   {slotsLoading ? <p className="text-sm text-brand-ink/65">{copy.confirmation.slotsLoading}</p> : null}
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2 grid-cols-2 sm:grid-cols-2">
                     {slotsData?.slots?.map((slot) => (
                       <Button
                         key={slot}
