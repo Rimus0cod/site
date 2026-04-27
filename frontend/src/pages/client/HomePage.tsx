@@ -2,8 +2,10 @@ import { Link } from "react-router-dom";
 import { useBarbers } from "../../api/barbers";
 import { useServices } from "../../api/services";
 import { ClientShell } from "../../components/client/ClientShell";
+import { TelegramGuideCard } from "../../components/client/TelegramGuideCard";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { getClientExperienceContent } from "../../lib/clientExperienceContent";
 import { getContent } from "../../lib/content";
 import { formatCurrency } from "../../lib/locale";
 import { SHOP_INFO } from "../../lib/shop";
@@ -12,8 +14,9 @@ import { usePreferencesStore } from "../../store/preferencesStore";
 export function HomePage() {
   const language = usePreferencesStore((state) => state.language);
   const copy = getContent(language);
-  const { data } = useServices();
-  const { data: barbers } = useBarbers();
+  const extraCopy = getClientExperienceContent(language);
+  const { data, isError: isServicesError, isLoading: isServicesLoading } = useServices();
+  const { data: barbers, isError: isBarbersError, isLoading: isBarbersLoading } = useBarbers();
   const shopHours = copy.shop.hours;
 
   return (
@@ -85,6 +88,15 @@ export function HomePage() {
             </Link>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
+            {isServicesLoading ? <Card className="md:col-span-3">Loading services...</Card> : null}
+            {isServicesError ? (
+              <Card className="md:col-span-3">Unable to load services right now. Please refresh the page.</Card>
+            ) : null}
+            {!isServicesLoading && !isServicesError && !data?.length ? (
+              <Card className="md:col-span-3">
+                No services are available yet. Add them in the admin panel to open public booking.
+              </Card>
+            ) : null}
             {data?.map((service) => (
               <Card key={service.id} className="space-y-4">
                 <div className="space-y-2">
@@ -116,6 +128,15 @@ export function HomePage() {
               <h2 className="font-display text-4xl leading-none text-brand-ink sm:text-5xl">{copy.home.barbersTitle}</h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
+              {isBarbersLoading ? <Card className="sm:col-span-2">Loading barbers...</Card> : null}
+              {isBarbersError ? (
+                <Card className="sm:col-span-2">Unable to load barbers right now. Please refresh the page.</Card>
+              ) : null}
+              {!isBarbersLoading && !isBarbersError && !barbers?.length ? (
+                <Card className="sm:col-span-2">
+                  No barbers are visible yet. Add them in the admin panel to complete the booking flow.
+                </Card>
+              ) : null}
               {barbers?.map((barber) => (
                 <div key={barber.id} className="rounded-[1.75rem] border border-brand-line/10 bg-brand-panel/94 p-4">
                   {barber.photoUrl ? (
@@ -151,6 +172,12 @@ export function HomePage() {
             </Card>
 
             <Card className="space-y-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{extraCopy.fairUse.badge}</p>
+              <h2 className="font-display text-3xl leading-none text-brand-ink">{extraCopy.fairUse.title}</h2>
+              <p className="text-sm font-medium text-brand-ink/74">{extraCopy.fairUse.text}</p>
+            </Card>
+
+            <Card className="space-y-4">
               <p className="text-xs uppercase tracking-[0.3em] text-brand-olive">{copy.home.policiesLabel}</p>
               <div className="grid gap-3 text-sm font-medium text-brand-ink/82">
                 {copy.shop.policies.map((item) => (
@@ -170,6 +197,8 @@ export function HomePage() {
                 ))}
               </div>
             </Card>
+
+            <TelegramGuideCard />
           </div>
         </section>
       </main>

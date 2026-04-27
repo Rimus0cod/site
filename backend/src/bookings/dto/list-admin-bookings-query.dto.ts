@@ -1,4 +1,5 @@
-import { IsEnum, IsOptional, IsString, IsUUID, Matches, MaxLength } from "class-validator";
+import { Type } from "class-transformer";
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min } from "class-validator";
 import { BookingStatus } from "../../common/enums/booking-status.enum";
 
 export class ListAdminBookingsQueryDto {
@@ -18,4 +19,17 @@ export class ListAdminBookingsQueryDto {
   @IsString()
   @MaxLength(100)
   search?: string;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit: number = 20;
 }

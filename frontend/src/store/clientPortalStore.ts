@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { sessionTokenStorage } from "./sessionTokenStorage";
 
 interface ManagedBookingAccess {
   bookingId: string;
@@ -11,6 +12,7 @@ interface ClientPortalState {
   recentAccess: ManagedBookingAccess[];
   saveAccess: (payload: { bookingId: string; token: string }) => void;
   removeAccess: (bookingId: string) => void;
+  getAccessToken: (bookingId: string) => string | undefined;
 }
 
 export const useClientPortalStore = create<ClientPortalState>()(
@@ -29,9 +31,12 @@ export const useClientPortalStore = create<ClientPortalState>()(
         set({
           recentAccess: get().recentAccess.filter((item) => item.bookingId !== bookingId),
         }),
+      getAccessToken: (bookingId) =>
+        get().recentAccess.find((item) => item.bookingId === bookingId)?.token,
     }),
     {
       name: "barberbook-client-portal",
+      storage: sessionTokenStorage,
     },
   ),
 );

@@ -1,5 +1,5 @@
 import { InjectRepository } from "@nestjs/typeorm";
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { BookingStatus } from "../common/enums/booking-status.enum";
 import { TelegramService } from "../telegram/telegram.service";
@@ -34,34 +34,14 @@ const REMINDER_WINDOWS: ReminderWindow[] = [
 ];
 
 @Injectable()
-export class BookingRemindersService implements OnModuleInit, OnModuleDestroy {
+export class BookingRemindersService {
   private readonly logger = new Logger(BookingRemindersService.name);
-  private intervalHandle: NodeJS.Timeout | null = null;
 
   constructor(
     @InjectRepository(BookingEntity)
     private readonly bookingRepository: Repository<BookingEntity>,
     private readonly telegramService: TelegramService,
   ) {}
-
-  onModuleInit() {
-    if (process.env.NODE_ENV === "test") {
-      return;
-    }
-
-    this.intervalHandle = setInterval(() => {
-      void this.flushUpcomingReminders();
-    }, 60_000);
-
-    void this.flushUpcomingReminders();
-  }
-
-  onModuleDestroy() {
-    if (this.intervalHandle) {
-      clearInterval(this.intervalHandle);
-      this.intervalHandle = null;
-    }
-  }
 
   async flushUpcomingReminders() {
     for (const window of REMINDER_WINDOWS) {

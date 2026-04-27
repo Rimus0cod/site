@@ -5,6 +5,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
+import { BookingHoldEntity } from "../booking-holds/booking-hold.entity";
 import { BookingEntity } from "../bookings/booking.entity";
 import { ScheduleExceptionEntity } from "../schedule/schedule-exception.entity";
 import { WorkScheduleEntity } from "../schedule/work-schedule.entity";
@@ -31,6 +32,9 @@ export class BarberEntity {
 
   @OneToMany(() => BookingEntity, (booking) => booking.barber)
   bookings!: BookingEntity[];
+
+  @OneToMany(() => BookingHoldEntity, (bookingHold) => bookingHold.barber)
+  bookingHolds!: BookingHoldEntity[];
 
   @OneToMany(() => WorkScheduleEntity, (schedule) => schedule.barber)
   schedules!: WorkScheduleEntity[];

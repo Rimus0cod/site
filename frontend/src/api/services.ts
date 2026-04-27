@@ -7,6 +7,8 @@ interface ServicePayload {
   description?: string;
   price?: number;
   durationMin?: number;
+  paymentPolicy?: "offline" | "deposit_fixed" | "deposit_percent" | "full_prepayment";
+  depositValue?: number | null;
   isActive?: boolean;
 }
 

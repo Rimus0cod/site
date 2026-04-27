@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useLogin } from "../../api/admin";
@@ -22,6 +23,7 @@ export function LoginPage() {
     setSession(data);
     navigate("/admin");
   });
+  const errorMessage = getLoginErrorMessage(login.error);
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
@@ -33,11 +35,7 @@ export function LoginPage() {
         <form className="grid gap-4" onSubmit={submit}>
           <Input placeholder="Email from backend/.env" {...register("email")} />
           <Input placeholder="Password from backend/.env" type="password" {...register("password")} />
-          {login.isError ? (
-            <p className="text-sm text-red-600">
-              Login failed. Use `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `backend/.env`.
-            </p>
-          ) : null}
+          {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
           <Button disabled={login.isPending} type="submit">
             {login.isPending ? "Signing in..." : "Sign in"}
           </Button>
@@ -45,4 +43,32 @@ export function LoginPage() {
       </Card>
     </main>
   );
+}
+
+function getLoginErrorMessage(error: unknown) {
+  if (!error) {
+    return null;
+  }
+
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+
+    if (status === 401) {
+      return "Invalid admin email or password. Check ADMIN_EMAIL and ADMIN_PASSWORD in backend/.env.";
+    }
+
+    if (status === 403) {
+      return "The admin session or CSRF token is stale. Refresh the page and try again.";
+    }
+
+    if (status === 429) {
+      return "Too many login attempts. Wait a moment and try again.";
+    }
+
+    if (!error.response) {
+      return "The admin API is unavailable right now. Wait for the backend to finish restarting, then refresh and try again.";
+    }
+  }
+
+  return "Login request failed. Check backend logs and try again.";
 }

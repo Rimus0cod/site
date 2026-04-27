@@ -1,21 +1,25 @@
 import {
   Body,
   Controller,
+  GoneException,
   Get,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
+import type { AdminAuditRequest } from "../admin-audit/admin-audit-log.service";
+import { AdminAuditLogService } from "../admin-audit/admin-audit-log.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { OptionalClientJwtAuthGuard } from "../client-auth/optional-client-jwt-auth.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { PublicThrottleGuard } from "../common/guards/public-throttle.guard";
 import { BookingsService } from "./bookings.service";
 import { CancelBookingDto } from "./dto/cancel-booking.dto";
-import { CreateBookingDto } from "./dto/create-booking.dto";
 import { CreateAdminBookingDto } from "./dto/create-admin-booking.dto";
 import { GetSlotsQueryDto } from "./dto/get-slots-query.dto";
 import { GetPublicBookingQueryDto } from "./dto/get-public-booking-query.dto";
@@ -25,7 +29,10 @@ import { UpdateBookingStatusDto } from "./dto/update-booking-status.dto";
 
 @Controller()
 export class BookingsController {
-  constructor(private readonly bookingsService: BookingsService) {}
+  constructor(
+    private readonly bookingsService: BookingsService,
+    private readonly adminAuditLogService: AdminAuditLogService,
+  ) {}
 
   @UseGuards(PublicThrottleGuard)
   @Get("barbers/:id/slots")
@@ -38,8 +45,9 @@ export class BookingsController {
 
   @UseGuards(PublicThrottleGuard)
   @Post("bookings")
-  createBooking(@Body() dto: CreateBookingDto) {
-    return this.bookingsService.createBooking(dto);
+  @UseGuards(OptionalClientJwtAuthGuard)
+  createBookingDeprecated() {
+    throw new GoneException("Public direct booking is disabled. Create a booking hold first.");
   }
 
   @UseGuards(PublicThrottleGuard)
@@ -73,17 +81,43 @@ export class BookingsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @Post("admin/bookings")
-  createAdminBooking(@Body() dto: CreateAdminBookingDto) {
-    return this.bookingsService.createAdminBooking(dto);
+  async createAdminBooking(@Body() dto: CreateAdminBookingDto, @Req() request: AdminAuditRequest) {
+    const booking = await this.bookingsService.createAdminBooking(dto);
+    await this.adminAuditLogService.recordFromRequest(request, {
+      action: "create",
+      resource: "booking",
+      resourceId: booking.id,
+      summary: `Created admin booking for ${booking.clientName}`,
+      metadata: {
+        barberId: booking.barberId,
+        serviceId: booking.serviceId,
+        startTime: booking.startTime,
+        status: booking.status,
+      },
+    });
+    return booking;
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @Patch("admin/bookings/:id/status")
-  updateBookingStatus(
+  async updateBookingStatus(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() dto: UpdateBookingStatusDto,
+    @Req() request: AdminAuditRequest,
   ) {
-    return this.bookingsService.updateStatus(id, dto);
+    const booking = await this.bookingsService.updateStatus(id, dto);
+    await this.adminAuditLogService.recordFromRequest(request, {
+      action: "status_update",
+      resource: "booking",
+      resourceId: booking.id,
+      summary: `Updated booking ${booking.id} status to ${booking.status}`,
+      metadata: {
+        clientName: booking.clientName,
+        startTime: booking.startTime,
+        status: booking.status,
+      },
+    });
+    return booking;
   }
 }

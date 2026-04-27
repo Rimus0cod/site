@@ -7,7 +7,7 @@ async function seedAdmin() {
   await AppDataSource.initialize();
   await AppDataSource.runMigrations();
   const repository = AppDataSource.getRepository(AdminEntity);
-  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@barberbook.local";
+  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
   const adminPassword = process.env.ADMIN_PASSWORD ?? "ChangeMe123!";
 
   const existing = await repository.findOne({

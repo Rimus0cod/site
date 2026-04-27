@@ -68,7 +68,7 @@ function BarberEditor({ barber }: { barber: Barber }) {
 }
 
 export function BarbersPage() {
-  const { data } = useAdminBarbers();
+  const { data, isError, isLoading } = useAdminBarbers();
   const createBarber = useCreateBarber();
   const { register, handleSubmit, reset } = useForm<FormValues>({
     defaultValues: {
@@ -106,6 +106,17 @@ export function BarbersPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
+        {isLoading ? <Card className="md:col-span-2">Loading barbers...</Card> : null}
+        {isError ? (
+          <Card className="md:col-span-2">
+            Unable to load admin barbers. Check the admin session and backend logs.
+          </Card>
+        ) : null}
+        {!isLoading && !isError && !data?.length ? (
+          <Card className="md:col-span-2">
+            No barbers have been created yet. Use the form above to add the first barber.
+          </Card>
+        ) : null}
         {data?.map((barber) => <BarberEditor key={barber.id} barber={barber} />)}
       </div>
     </main>

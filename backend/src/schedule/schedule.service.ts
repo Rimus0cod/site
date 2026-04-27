@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { BarbersService } from "../barbers/barbers.service";
 import { isPositiveRange } from "../bookings/booking-rules";
+import { SlotCacheService } from "../redis/slot-cache.service";
 import { ScheduleExceptionEntity } from "./schedule-exception.entity";
 import { UpdateScheduleExceptionsDto } from "./dto/update-schedule-exceptions.dto";
 import { UpdateScheduleDto } from "./dto/update-schedule.dto";
@@ -16,6 +17,7 @@ export class ScheduleService {
     @InjectRepository(ScheduleExceptionEntity)
     private readonly scheduleExceptionRepository: Repository<ScheduleExceptionEntity>,
     private readonly barbersService: BarbersService,
+    private readonly slotCacheService: SlotCacheService,
   ) {}
 
   async getBarberSchedule(barberId: string) {
@@ -77,6 +79,7 @@ export class ScheduleService {
     );
 
     const saved = await this.scheduleRepository.save(entities);
+    await this.slotCacheService.invalidateBarber(barberId);
     return {
       barberId,
       days: saved.sort((left, right) => left.dayOfWeek - right.dayOfWeek),
@@ -115,6 +118,7 @@ export class ScheduleService {
     );
 
     const saved = await this.scheduleExceptionRepository.save(entities);
+    await this.slotCacheService.invalidateBarber(barberId);
     return {
       barberId,
       exceptions: saved.sort((left, right) => left.date.localeCompare(right.date)),

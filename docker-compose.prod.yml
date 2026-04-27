@@ -1,51 +1,184 @@
-version: "3.9"
+x-backend-env: &backend-env
+  NODE_ENV: production
+  PORT: 3001
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_NAME: ${DB_NAME:-barbershop}
+  DB_USER: ${DB_USER:-barber}
+  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+  DB_SYNCHRONIZE: "false"
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  BACKUP_STATUS_FILE: ${BACKUP_STATUS_FILE:-/var/lib/barberbook/backup-state/last-success.json}
+  BACKUP_MAX_AGE_HOURS: ${BACKUP_MAX_AGE_HOURS:-24}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_ADMIN_CHAT_ID: ${TELEGRAM_ADMIN_CHAT_ID:-}
+  TELEGRAM_MODE: ${TELEGRAM_MODE:-outbound}
+  FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+  BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:?BACKEND_PUBLIC_URL is required}
+  PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:?PAYMENT_PROVIDER is required}
+  PAYMENT_RECONCILIATION_INTERVAL_MS: ${PAYMENT_RECONCILIATION_INTERVAL_MS:-300000}
+  LIQPAY_PUBLIC_KEY: ${LIQPAY_PUBLIC_KEY:-}
+  LIQPAY_PRIVATE_KEY: ${LIQPAY_PRIVATE_KEY:-}
+  LIQPAY_SANDBOX: ${LIQPAY_SANDBOX:-false}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+  STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
 
 services:
   postgres:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: barbershop
-      POSTGRES_USER: barber
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: ${DB_NAME:-barbershop}
+      POSTGRES_USER: ${DB_USER:-barber}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-barber} -d ${DB_NAME:-barbershop}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   backend:
     build: ./backend
+    image: barberbook-backend:prod
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
-    environment:
-      NODE_ENV: production
-      DB_SYNCHRONIZE: "false"
+    environment: *backend-env
     depends_on:
-      - postgres
-      - redis
-    command: sh -c "npm run migration:run && npm run start:dev"
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     expose:
       - "3001"
+    volumes:
+      - ./ops/backup-state:/var/lib/barberbook/backup-state:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const http=require('http');const req=http.get({host:'127.0.0.1',port:Number(process.env.PORT||3001),path:'/api/v1/health/ready',timeout:3000},res=>process.exit(res.statusCode===200?0:1));req.on('error',()=>process.exit(1));req.on('timeout',()=>{req.destroy();process.exit(1);});",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  migrations:
+    image: barberbook-backend:prod
+    profiles: ["ops"]
+    environment: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["npm", "run", "migration:run:prod"]
+    restart: "no"
+
+  worker:
+    image: barberbook-backend:prod
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      TELEGRAM_MODE: ${WORKER_TELEGRAM_MODE:-polling}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["npm", "run", "start:worker"]
+    volumes:
+      - ./ops/backup-state:/var/lib/barberbook/backup-state:ro
+
+  backup:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-barbershop}
+      DB_USER: ${DB_USER:-barber}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      BACKUP_DIR: /backups
+      BACKUP_STATUS_FILE: /backup-state/last-success.json
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "/backup-scripts/backup-loop.sh"]
+    volumes:
+      - ./ops/backup:/backup-scripts:ro
+      - ./ops/backups:/backups
+      - ./ops/backup-state:/backup-state
 
   frontend:
     build: ./frontend
+    image: barberbook-frontend:prod
     restart: unless-stopped
     expose:
-      - "3000"
+      - "8080"
 
   nginx:
-    image: nginx:1.27-alpine
+    build: ./nginx
+    image: barberbook-nginx:prod
     restart: unless-stopped
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+
+  prometheus:
+    image: prom/prometheus:v2.53.4
+    profiles: ["observability"]
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    profiles: ["observability"]
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
 
 volumes:
   pgdata:

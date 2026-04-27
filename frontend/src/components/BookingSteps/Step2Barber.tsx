@@ -8,12 +8,20 @@ import { usePreferencesStore } from "../../store/preferencesStore";
 export function Step2Barber() {
   const language = usePreferencesStore((state) => state.language);
   const copy = getContent(language);
-  const { data, isLoading } = useBarbers();
+  const { data, isError, isLoading } = useBarbers();
   const selectedBarber = useBookingStore((state) => state.selectedBarber);
   const setSelectedBarber = useBookingStore((state) => state.setSelectedBarber);
 
   if (isLoading) {
     return <Card>{copy.booking.step2Loading}</Card>;
+  }
+
+  if (isError) {
+    return <Card>Unable to load barbers right now. Please refresh the page or try again later.</Card>;
+  }
+
+  if (!data?.length) {
+    return <Card>No barbers are available yet. Please contact the shop or add barbers in the admin panel.</Card>;
   }
 
   return (

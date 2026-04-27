@@ -1,5 +1,5 @@
 import { InjectRepository } from "@nestjs/typeorm";
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import TelegramBot from "node-telegram-bot-api";
 import { Repository } from "typeorm";
@@ -7,10 +7,11 @@ import { BookingEntity } from "../bookings/booking.entity";
 import { TelegramProfileEntity } from "./telegram-profile.entity";
 
 @Injectable()
-export class TelegramService implements OnModuleInit {
+export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelegramService.name);
   private bot: TelegramBot | null = null;
   private chatId: string;
+  private mode: "disabled" | "outbound" | "polling";
 
   constructor(
     private readonly configService: ConfigService,
@@ -20,17 +21,34 @@ export class TelegramService implements OnModuleInit {
     private readonly telegramProfileRepository: Repository<TelegramProfileEntity>,
   ) {
     this.chatId = this.configService.get<string>("telegram.adminChatId", "");
+    this.mode = this.configService.get<"disabled" | "outbound" | "polling">(
+      "telegram.mode",
+      "outbound",
+    );
   }
 
   onModuleInit() {
     const token = this.configService.get<string>("telegram.botToken", "");
-    if (!token) {
-      this.logger.log("Telegram bot token is not configured; notifications are disabled.");
+    if (!token || this.mode === "disabled") {
+      this.logger.log("Telegram is disabled for this process.");
       return;
     }
 
-    this.bot = new TelegramBot(token, { polling: true });
-    this.registerBotHandlers();
+    this.bot = new TelegramBot(token, this.mode === "polling" ? { polling: true } : undefined);
+
+    if (this.mode === "polling") {
+      this.registerBotHandlers();
+      this.logger.log("Telegram polling is enabled in the current process.");
+      return;
+    }
+
+    this.logger.log("Telegram outbound mode is enabled without polling.");
+  }
+
+  async onModuleDestroy() {
+    if (this.bot && this.mode === "polling") {
+      await this.bot.stopPolling().catch(() => undefined);
+    }
   }
 
   async sendNewBookingAlert(booking: BookingEntity) {

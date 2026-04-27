@@ -1,0 +1,74 @@
+groups:
+  - name: barberbook-production
+    rules:
+      - alert: BarberBookApiHigh5xxRate
+        expr: |
+          (
+            sum(rate(barberbook_http_requests_total{status_code=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(barberbook_http_requests_total[5m])), 1)
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "BarberBook API 5xx rate is above 1%"
+          description: "The API is returning more than 1% 5xx responses over the last 5 minutes."
+
+      - alert: BarberBookApiHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(barberbook_http_request_duration_seconds_bucket[10m]))
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "BarberBook API p95 latency is above 500ms"
+          description: "Observed p95 latency is above 500ms for the last 10 minutes."
+
+      - alert: BarberBookDatabaseNotReady
+        expr: barberbook_component_ready{component="database"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database readiness probe is failing"
+          description: "The application cannot reach PostgreSQL."
+
+      - alert: BarberBookRedisNotReady
+        expr: barberbook_component_ready{component="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis readiness probe is failing"
+          description: "The application cannot reach Redis."
+
+      - alert: BarberBookBackupStale
+        expr: time() - barberbook_backup_last_success_timestamp_seconds > 86400
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL backup is older than 24 hours"
+          description: "No successful backup has been recorded in the last 24 hours."
+
+      - alert: BarberBookReminderWorkerLag
+        expr: time() - barberbook_worker_task_last_success_timestamp_seconds{task="booking-reminders"} > 900
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Reminder worker is lagging"
+          description: "The booking reminders task has not completed successfully within the expected interval."
+
+      - alert: BarberBookPaymentReconciliationLag
+        expr: time() - barberbook_worker_task_last_success_timestamp_seconds{task="payment-reconciliation"} > 1800
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Payment reconciliation worker is lagging"
+          description: "The payment reconciliation task has not completed successfully within the expected interval."

@@ -12,3 +12,7 @@ frontend/dist/
 *.tsbuildinfo
 nginx/certs/*
 !nginx/certs/.gitkeep
+ops/backups/*
+!ops/backups/.gitkeep
+ops/backup-state/*
+!ops/backup-state/.gitkeep

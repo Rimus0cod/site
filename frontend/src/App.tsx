@@ -4,6 +4,7 @@ import { useLogout, useMe } from "./api/admin";
 import { HomePage } from "./pages/client/HomePage";
 import { BookingWizard } from "./pages/client/BookingWizard";
 import { ConfirmationPage } from "./pages/client/ConfirmationPage";
+import { CheckoutPage } from "./pages/client/CheckoutPage";
 import { ClientPortalPage } from "./pages/client/ClientPortalPage";
 import { LoginPage } from "./pages/admin/LoginPage";
 import { DashboardPage } from "./pages/admin/DashboardPage";
@@ -46,29 +47,29 @@ function AdminLayout() {
 }
 
 function AdminGuard() {
-  const admin = useAuthStore((state) => state.admin);
   const setAdmin = useAuthStore((state) => state.setAdmin);
   const clearSession = useAuthStore((state) => state.clearSession);
-  const { data, isLoading, isError } = useMe(!admin);
+  const { data, isLoading, isError } = useMe();
+  const currentAdmin = data?.admin ?? null;
 
   useEffect(() => {
-    if (data?.admin) {
-      setAdmin(data.admin);
+    if (currentAdmin) {
+      setAdmin(currentAdmin);
     }
-  }, [data, setAdmin]);
+  }, [currentAdmin, setAdmin]);
 
   useEffect(() => {
-    if (isError && !admin) {
+    if (isError) {
       clearSession();
     }
-  }, [admin, clearSession, isError]);
+  }, [clearSession, isError]);
 
-  if (admin || data?.admin) {
-    return <AdminLayout />;
+  if (isLoading && !currentAdmin) {
+    return <main className="mx-auto max-w-3xl px-6 py-12">Checking admin session...</main>;
   }
 
-  if (isLoading) {
-    return <main className="mx-auto max-w-3xl px-6 py-12">Checking admin session...</main>;
+  if (currentAdmin) {
+    return <AdminLayout />;
   }
 
   return <Navigate replace to="/admin/login" />;
@@ -79,6 +80,7 @@ export default function App() {
     <Routes>
       <Route element={<HomePage />} path="/" />
       <Route element={<BookingWizard />} path="/booking" />
+      <Route element={<CheckoutPage />} path="/booking/hold/:id" />
       <Route element={<ConfirmationPage />} path="/booking/confirm/:id" />
       <Route element={<ClientPortalPage />} path="/account" />
       <Route element={<LoginPage />} path="/admin/login" />

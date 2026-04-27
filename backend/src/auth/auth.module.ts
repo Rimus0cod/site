@@ -4,6 +4,8 @@ import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AdminEntity } from "../common/entities/admin.entity";
+import { AdminBootstrapService } from "./admin-bootstrap.service";
+import { AdminLoginThrottleGuard } from "./admin-login-throttle.guard";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./jwt.strategy";
@@ -24,8 +26,7 @@ import { JwtStrategy } from "./jwt.strategy";
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, AdminLoginThrottleGuard, AdminBootstrapService],
   exports: [AuthService],
 })
 export class AuthModule {}
-

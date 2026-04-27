@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "../lib/api-client";
+import { apiClient, prepareAdminCsrfToken } from "../lib/api-client";
 import { normalizeTimeValue } from "../lib/utils";
 import type {
+  AdminAuditLogsResponse,
   AdminUser,
   ScheduleException,
   ScheduleExceptionsResponse,
@@ -9,7 +10,6 @@ import type {
 } from "../lib/types";
 
 interface LoginResponse {
-  accessToken: string;
   admin: AdminUser;
 }
 
@@ -20,6 +20,7 @@ interface MeResponse {
 export function useLogin() {
   return useMutation({
     mutationFn: async (payload: { email: string; password: string }) => {
+      await prepareAdminCsrfToken();
       const { data } = await apiClient.post<LoginResponse>("/auth/login", payload);
       return data;
     },
@@ -41,7 +42,24 @@ export function useMe(enabled = true) {
 export function useLogout() {
   return useMutation({
     mutationFn: async () => {
+      await prepareAdminCsrfToken();
       const { data } = await apiClient.post<{ success: true }>("/auth/logout");
+      return data;
+    },
+  });
+}
+
+export function useAdminAuditLogs(filters?: { page?: number; limit?: number; resource?: string }) {
+  return useQuery({
+    queryKey: ["admin", "audit-logs", filters],
+    queryFn: async () => {
+      const { data } = await apiClient.get<AdminAuditLogsResponse>("/admin/audit-logs", {
+        params: {
+          page: filters?.page ?? 1,
+          limit: filters?.limit ?? 10,
+          resource: filters?.resource || undefined,
+        },
+      });
       return data;
     },
   });

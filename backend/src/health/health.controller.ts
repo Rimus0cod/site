@@ -7,6 +7,16 @@ export class HealthController {
 
   @Get()
   getHealth() {
-    return this.healthService.getHealth();
+    return this.healthService.getReadyHealth();
+  }
+
+  @Get("live")
+  getLiveHealth() {
+    return this.healthService.getLiveHealth();
+  }
+
+  @Get("ready")
+  getReadyHealth() {
+    return this.healthService.getReadyHealth();
   }
 }

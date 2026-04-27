@@ -11,9 +11,10 @@ export class CreateBookingDto {
   @MaxLength(100)
   clientName!: string;
 
+  @IsOptional()
   @IsString()
   @Length(7, 20)
-  clientPhone!: string;
+  clientPhone?: string;
 
   @IsOptional()
   @IsString()

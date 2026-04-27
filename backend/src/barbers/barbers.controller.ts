@@ -7,8 +7,11 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from "@nestjs/common";
+import type { AdminAuditRequest } from "../admin-audit/admin-audit-log.service";
+import { AdminAuditLogService } from "../admin-audit/admin-audit-log.service";
 import { Roles } from "../common/decorators/roles.decorator";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -18,7 +21,10 @@ import { UpdateBarberDto } from "./dto/update-barber.dto";
 
 @Controller()
 export class BarbersController {
-  constructor(private readonly barbersService: BarbersService) {}
+  constructor(
+    private readonly barbersService: BarbersService,
+    private readonly adminAuditLogService: AdminAuditLogService,
+  ) {}
 
   @Get("barbers")
   getPublicBarbers() {
@@ -35,22 +41,59 @@ export class BarbersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @Post("admin/barbers")
-  createBarber(@Body() dto: CreateBarberDto) {
-    return this.barbersService.create(dto);
+  async createBarber(@Body() dto: CreateBarberDto, @Req() request: AdminAuditRequest) {
+    const barber = await this.barbersService.create(dto);
+    await this.adminAuditLogService.recordFromRequest(request, {
+      action: "create",
+      resource: "barber",
+      resourceId: barber.id,
+      summary: `Created barber "${barber.name}"`,
+      metadata: {
+        name: barber.name,
+        isActive: barber.isActive,
+      },
+    });
+    return barber;
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @Patch("admin/barbers/:id")
-  updateBarber(@Param("id", ParseUUIDPipe) id: string, @Body() dto: UpdateBarberDto) {
-    return this.barbersService.update(id, dto);
+  async updateBarber(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBarberDto,
+    @Req() request: AdminAuditRequest,
+  ) {
+    const barber = await this.barbersService.update(id, dto);
+    await this.adminAuditLogService.recordFromRequest(request, {
+      action: "update",
+      resource: "barber",
+      resourceId: barber.id,
+      summary: `Updated barber "${barber.name}"`,
+      metadata: {
+        changes: dto,
+        isActive: barber.isActive,
+      },
+    });
+    return barber;
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @Delete("admin/barbers/:id")
-  deleteBarber(@Param("id", ParseUUIDPipe) id: string) {
-    return this.barbersService.remove(id);
+  async deleteBarber(@Param("id", ParseUUIDPipe) id: string, @Req() request: AdminAuditRequest) {
+    const barber = await this.barbersService.getOrFail(id);
+    const result = await this.barbersService.remove(id);
+    await this.adminAuditLogService.recordFromRequest(request, {
+      action: "delete",
+      resource: "barber",
+      resourceId: id,
+      summary: `Deleted barber "${barber.name}"`,
+      metadata: {
+        name: barber.name,
+        isActive: barber.isActive,
+      },
+    });
+    return result;
   }
 }
-

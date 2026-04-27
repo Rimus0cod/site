@@ -1,10 +1,8 @@
 services:
   postgres:
     image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: barbershop
-      POSTGRES_USER: barber
-      POSTGRES_PASSWORD: secret
+    env_file:
+      - ./backend/.env
     ports:
       - "5432:5432"
     volumes:
@@ -16,12 +14,15 @@ services:
       - "6379:6379"
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      target: development
     env_file:
       - ./backend/.env
     environment:
       NODE_ENV: development
       DB_SYNCHRONIZE: "false"
+      TELEGRAM_MODE: outbound
     depends_on:
       - postgres
       - redis
@@ -31,8 +32,27 @@ services:
     volumes:
       - ./backend/src:/app/src
 
+  worker:
+    build:
+      context: ./backend
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: development
+      DB_SYNCHRONIZE: "false"
+      TELEGRAM_MODE: polling
+    depends_on:
+      - postgres
+      - redis
+    command: sh -c "npm run start:worker:dev"
+    volumes:
+      - ./backend/src:/app/src
+
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: development
     environment:
       VITE_API_URL: /api/v1
       VITE_DEV_PROXY_TARGET: http://backend:3001

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useBooking, useCancelBooking, useRescheduleBooking, useSlots } from "../../api/bookings";
 import { ClientShell } from "../../components/client/ClientShell";
 import { Button } from "../../components/ui/Button";
@@ -7,7 +7,7 @@ import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Textarea } from "../../components/ui/Textarea";
 import { getContent } from "../../lib/content";
-import { formatDateTime, formatTime } from "../../lib/locale";
+import { formatCurrency, formatDateTime, formatTime } from "../../lib/locale";
 import { SHOP_INFO } from "../../lib/shop";
 import { useClientPortalStore } from "../../store/clientPortalStore";
 import { usePreferencesStore } from "../../store/preferencesStore";
@@ -15,10 +15,13 @@ import { usePreferencesStore } from "../../store/preferencesStore";
 export function ConfirmationPage() {
   const { id } = useParams();
   const [params] = useSearchParams();
-  const token = params.get("token") ?? undefined;
+  const navigate = useNavigate();
+  const tokenFromQuery = params.get("token") ?? undefined;
   const language = usePreferencesStore((state) => state.language);
   const saveAccess = useClientPortalStore((state) => state.saveAccess);
+  const getAccessToken = useClientPortalStore((state) => state.getAccessToken);
   const copy = getContent(language);
+  const token = id ? tokenFromQuery ?? getAccessToken(id) : undefined;
   const { data, isLoading } = useBooking(id, token);
   const cancelBooking = useCancelBooking();
   const rescheduleBooking = useRescheduleBooking();
@@ -40,10 +43,11 @@ export function ConfirmationPage() {
   }, [data?.startTime]);
 
   useEffect(() => {
-    if (id && token) {
-      saveAccess({ bookingId: id, token });
+    if (id && tokenFromQuery) {
+      saveAccess({ bookingId: id, token: tokenFromQuery });
+      navigate(`/booking/confirm/${id}`, { replace: true });
     }
-  }, [id, saveAccess, token]);
+  }, [id, navigate, saveAccess, tokenFromQuery]);
 
   if (isLoading) {
     return (
@@ -100,6 +104,12 @@ export function ConfirmationPage() {
             <div className="grid gap-3 text-sm font-medium text-brand-ink/80">
               <p>{copy.confirmation.start}: {formatDateTime(data.startTime, language)}</p>
               <p>{copy.confirmation.end}: {formatTime(data.endTime, language)}</p>
+              {data.depositAmount ? (
+                <p>{copy.checkout.depositLabel}: {formatCurrency(data.depositAmount, language)}</p>
+              ) : null}
+              {data.paymentStatus ? (
+                <p>{copy.checkout.paymentStatus}: {copy.paymentStatus[data.paymentStatus]}</p>
+              ) : null}
               <p>
                 {copy.confirmation.created}:{" "}
                 {data.createdAt ? formatDateTime(data.createdAt, language) : copy.confirmation.justNow}

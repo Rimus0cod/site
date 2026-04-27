@@ -9,12 +9,20 @@ import { usePreferencesStore } from "../../store/preferencesStore";
 export function Step1Services() {
   const language = usePreferencesStore((state) => state.language);
   const copy = getContent(language);
-  const { data, isLoading } = useServices();
+  const { data, isError, isLoading } = useServices();
   const selectedService = useBookingStore((state) => state.selectedService);
   const setSelectedService = useBookingStore((state) => state.setSelectedService);
 
   if (isLoading) {
     return <Card>{copy.booking.step1Loading}</Card>;
+  }
+
+  if (isError) {
+    return <Card>Unable to load services right now. Please refresh the page or try again later.</Card>;
+  }
+
+  if (!data?.length) {
+    return <Card>No services are available yet. Please contact the shop or add services in the admin panel.</Card>;
   }
 
   return (

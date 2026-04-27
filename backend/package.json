@@ -5,11 +5,16 @@
   "scripts": {
     "start": "nest start",
     "start:dev": "nest start --watch",
+    "start:prod": "node dist/main.js",
+    "start:worker": "node dist/worker.js",
+    "start:worker:dev": "ts-node -r tsconfig-paths/register src/worker.ts",
     "build": "nest build",
-    "lint": "eslint \"src/**/*.ts\"",
+    "lint": "tsc --noEmit --pretty false",
     "seed:admin": "ts-node -r tsconfig-paths/register src/database/seed-admin.ts",
     "migration:run": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:run",
+    "migration:run:prod": "typeorm -d dist/database/data-source.js migration:run",
     "migration:revert": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:revert",
+    "migration:revert:prod": "typeorm -d dist/database/data-source.js migration:revert",
     "test": "ts-node src/bookings/booking-rules.test.ts"
   },
   "dependencies": {
@@ -25,13 +30,16 @@
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
     "dayjs": "^1.11.13",
+    "ioredis": "^5.10.1",
     "joi": "^17.13.3",
     "node-telegram-bot-api": "^0.66.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.13.1",
+    "prom-client": "^15.1.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "stripe": "^22.0.2",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
@@ -45,8 +53,8 @@
     "@types/node-telegram-bot-api": "^0.64.8",
     "@types/passport-jwt": "^4.0.1",
     "ts-node": "^10.9.2",
-    "typeorm-ts-node-commonjs": "^0.3.20",
     "tsconfig-paths": "^4.2.0",
+    "typeorm-ts-node-commonjs": "^0.3.20",
     "typescript": "^5.7.2"
   }
 }

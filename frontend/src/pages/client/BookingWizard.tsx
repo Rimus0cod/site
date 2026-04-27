@@ -8,13 +8,11 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { getContent } from "../../lib/content";
 import { useBookingStore } from "../../store/bookingStore";
-import { useClientPortalStore } from "../../store/clientPortalStore";
 import { usePreferencesStore } from "../../store/preferencesStore";
 
 export function BookingWizard() {
   const navigate = useNavigate();
   const language = usePreferencesStore((state) => state.language);
-  const saveAccess = useClientPortalStore((state) => state.saveAccess);
   const copy = getContent(language);
   const selectedService = useBookingStore((state) => state.selectedService);
   const selectedBarber = useBookingStore((state) => state.selectedBarber);
@@ -39,9 +37,8 @@ export function BookingWizard() {
         {selectedService && selectedBarber ? <Step3DateTime /> : null}
         {selectedService && selectedBarber && selectedSlot ? (
           <Step4Confirm
-            onSuccess={({ bookingId, managementToken }) => {
-              saveAccess({ bookingId, token: managementToken });
-              navigate(`/booking/confirm/${bookingId}?token=${encodeURIComponent(managementToken)}`);
+            onSuccess={({ holdId, accessToken }) => {
+              navigate(`/booking/hold/${holdId}?token=${encodeURIComponent(accessToken)}`);
             }}
           />
         ) : null}
