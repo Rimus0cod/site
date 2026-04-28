@@ -1,15 +1,15 @@
 import { InjectRepository } from "@nestjs/typeorm";
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import TelegramBot from "node-telegram-bot-api";
 import { Repository } from "typeorm";
 import { BookingEntity } from "../bookings/booking.entity";
+import { TelegramApiClient, TelegramMessage } from "./telegram-api.client";
 import { TelegramProfileEntity } from "./telegram-profile.entity";
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelegramService.name);
-  private bot: TelegramBot | null = null;
+  private bot: TelegramApiClient | null = null;
   private chatId: string;
   private mode: "disabled" | "outbound" | "polling";
 
@@ -34,10 +34,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.bot = new TelegramBot(token, this.mode === "polling" ? { polling: true } : undefined);
+    this.bot = new TelegramApiClient(token, this.logger);
 
     if (this.mode === "polling") {
-      this.registerBotHandlers();
+      this.bot.startPolling((message) => this.handleIncomingMessage(message));
       this.logger.log("Telegram polling is enabled in the current process.");
       return;
     }
@@ -47,7 +47,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     if (this.bot && this.mode === "polling") {
-      await this.bot.stopPolling().catch(() => undefined);
+      await this.bot.stopPolling();
     }
   }
 
@@ -217,36 +217,35 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await this.bot.sendMessage(profile.chatId, text);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown Telegram error";
-      this.logger.warn(
-        `Failed to send Telegram DM to @${normalizedUsername}. ${message}`,
-      );
+      this.logger.warn(`Failed to send Telegram DM to @${normalizedUsername}. ${message}`);
     }
   }
 
-  private registerBotHandlers() {
-    if (!this.bot) {
+  private async handleIncomingMessage(message: TelegramMessage) {
+    await this.registerTelegramProfile(message);
+
+    const text = message.text?.trim();
+    if (!text) {
       return;
     }
 
-    this.bot.on("message", (message) => {
-      void this.registerTelegramProfile(message);
+    const normalizedText = text.toLowerCase();
+    if (/^\/start(?:\s+.*)?$/i.test(text)) {
+      await this.handleStartCommand(message);
+      return;
+    }
 
-      const text = message.text?.trim().toLowerCase();
-      if (text === "мои записи" || text === "my bookings" || text === "bookings") {
-        void this.sendBookingsForTelegramUser(message);
-      }
-    });
-
-    this.bot.onText(/^\/start(?:\s+.*)?$/, (message) => {
-      void this.handleStartCommand(message);
-    });
-
-    this.bot.onText(/^\/(?:bookings|mybookings)(?:@[\w_]+)?$/i, (message) => {
-      void this.sendBookingsForTelegramUser(message);
-    });
+    if (
+      normalizedText === "\u043c\u043e\u0438 \u0437\u0430\u043f\u0438\u0441\u0438" ||
+      normalizedText === "my bookings" ||
+      normalizedText === "bookings" ||
+      /^\/(?:bookings|mybookings)(?:@[\w_]+)?$/i.test(text)
+    ) {
+      await this.sendBookingsForTelegramUser(message);
+    }
   }
 
-  private async handleStartCommand(message: TelegramBot.Message) {
+  private async handleStartCommand(message: TelegramMessage) {
     if (!this.bot) {
       return;
     }
@@ -257,14 +256,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       username
         ? `Your Telegram profile is linked as @${username}.`
         : "Set a Telegram username in your Telegram profile so I can match your bookings.",
-      "Use /bookings or send 'мои записи' to get your current bookings.",
+      "Use /bookings or send '\u043c\u043e\u0438 \u0437\u0430\u043f\u0438\u0441\u0438' to get your current bookings.",
     ].join("\n");
 
     await this.bot.sendMessage(message.chat.id, intro);
     await this.sendBookingsForTelegramUser(message);
   }
 
-  private async registerTelegramProfile(message: TelegramBot.Message) {
+  private async registerTelegramProfile(message: TelegramMessage) {
     const username = this.normalizeUsername(message.from?.username);
     if (!username) {
       return;
@@ -291,7 +290,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private async sendBookingsForTelegramUser(message: TelegramBot.Message) {
+  private async sendBookingsForTelegramUser(message: TelegramMessage) {
     if (!this.bot) {
       return;
     }

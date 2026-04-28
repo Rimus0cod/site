@@ -20,7 +20,7 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, "client-jwt") 
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([extractClientToken]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>("jwt.secret"),
+      secretOrKey: configService.getOrThrow<string>("jwt.secret"),
     });
   }
 
