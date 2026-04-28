@@ -1,8 +1,43 @@
+x-backend-env: &backend-env
+  NODE_ENV: ${NODE_ENV:-development}
+  PORT: ${PORT:-3001}
+  DB_HOST: ${DB_HOST:-postgres}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_NAME: ${DB_NAME:-barbershop}
+  DB_USER: ${DB_USER:-barber}
+  DB_PASSWORD: ${DB_PASSWORD:-REPLACE_WITH_STRONG_DB_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB:-barbershop}
+  POSTGRES_USER: ${POSTGRES_USER:-barber}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-REPLACE_WITH_STRONG_DB_PASSWORD}
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  BACKUP_STATUS_FILE: ${BACKUP_STATUS_FILE:-./ops/backup-state/last-success.json}
+  BACKUP_MAX_AGE_HOURS: ${BACKUP_MAX_AGE_HOURS:-24}
+  JWT_SECRET: ${JWT_SECRET:-REPLACE_WITH_LONG_RANDOM_JWT_SECRET}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-REPLACE_WITH_ADMIN_PASSWORD}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_ADMIN_CHAT_ID: ${TELEGRAM_ADMIN_CHAT_ID:-}
+  TELEGRAM_MODE: ${TELEGRAM_MODE:-polling}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+  BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-http://localhost:3001}
+  PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+  PAYMENT_RECONCILIATION_INTERVAL_MS: ${PAYMENT_RECONCILIATION_INTERVAL_MS:-300000}
+  LIQPAY_PUBLIC_KEY: ${LIQPAY_PUBLIC_KEY:-}
+  LIQPAY_PRIVATE_KEY: ${LIQPAY_PRIVATE_KEY:-}
+  LIQPAY_SANDBOX: ${LIQPAY_SANDBOX:-false}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+  STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+
 services:
   postgres:
     image: postgres:15-alpine
-    env_file:
-      - ./backend/.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-barbershop}
+      POSTGRES_USER: ${POSTGRES_USER:-barber}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-REPLACE_WITH_STRONG_DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -17,9 +52,8 @@ services:
     build:
       context: ./backend
       target: development
-    env_file:
-      - ./backend/.env
     environment:
+      <<: *backend-env
       NODE_ENV: development
       DB_SYNCHRONIZE: "false"
       TELEGRAM_MODE: outbound
@@ -36,9 +70,8 @@ services:
     build:
       context: ./backend
       target: development
-    env_file:
-      - ./backend/.env
     environment:
+      <<: *backend-env
       NODE_ENV: development
       DB_SYNCHRONIZE: "false"
       TELEGRAM_MODE: polling
