@@ -75,9 +75,25 @@ jobs:
         run: docker compose -f docker-compose.yml config
 
       - name: Validate production compose
+        env:
+          DB_PASSWORD: ci-placeholder-db-password
+          JWT_SECRET: ci-placeholder-jwt-secret
+          ADMIN_EMAIL: admin@example.com
+          ADMIN_PASSWORD: ci-placeholder-admin-password
+          FRONTEND_URL: https://example.com
+          BACKEND_PUBLIC_URL: https://example.com
+          PAYMENT_PROVIDER: mock
         run: docker compose -f docker-compose.prod.yml config
 
       - name: Ensure production compose does not start dev servers
+        env:
+          DB_PASSWORD: ci-placeholder-db-password
+          JWT_SECRET: ci-placeholder-jwt-secret
+          ADMIN_EMAIL: admin@example.com
+          ADMIN_PASSWORD: ci-placeholder-admin-password
+          FRONTEND_URL: https://example.com
+          BACKEND_PUBLIC_URL: https://example.com
+          PAYMENT_PROVIDER: mock
         shell: bash
         run: |
           rendered="$(docker compose -f docker-compose.prod.yml config)"
