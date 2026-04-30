@@ -97,7 +97,7 @@ export class BookingsService {
 
     qb.leftJoinAndSelect("booking.barber", "barber");
     qb.leftJoinAndSelect("booking.service", "service");
-    qb.orderBy("booking.start_time", "ASC");
+    qb.orderBy("booking.startTime", "ASC");
 
     if (query.date) {
       const dayStart = `${query.date}T00:00:00`;

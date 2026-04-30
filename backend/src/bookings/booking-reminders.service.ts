@@ -63,7 +63,7 @@ export class BookingRemindersService {
       })
       .andWhere("booking.start_time BETWEEN :from AND :to", { from, to })
       .andWhere(`booking.${window.dbColumn} IS NULL`)
-      .orderBy("booking.start_time", "ASC")
+      .orderBy("booking.startTime", "ASC")
       .getMany();
 
     for (const booking of bookings) {

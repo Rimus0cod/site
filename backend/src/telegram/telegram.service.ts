@@ -309,7 +309,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       .leftJoinAndSelect("booking.barber", "barber")
       .leftJoinAndSelect("booking.service", "service")
       .where("LOWER(booking.client_telegram_username) = :username", { username })
-      .orderBy("booking.start_time", "ASC")
+      .orderBy("booking.startTime", "ASC")
       .getMany();
 
     if (bookings.length === 0) {

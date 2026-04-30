@@ -42,7 +42,7 @@ export class AdminAuditLogService {
     const limit = query.limit ?? 10;
     const qb = this.adminAuditLogRepository
       .createQueryBuilder("audit")
-      .orderBy("audit.created_at", "DESC")
+      .orderBy("audit.createdAt", "DESC")
       .skip((page - 1) * limit)
       .take(limit);
 
@@ -108,4 +108,3 @@ export class AdminAuditLogService {
     return ip?.trim() ? ip.trim() : null;
   }
 }
-

@@ -4,6 +4,7 @@ import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { PublicThrottleGuard } from "../common/guards/public-throttle.guard";
+import { SecurityModule } from "../security/security.module";
 import { ClientAccountEntity } from "./client-account.entity";
 import { ClientAuthController } from "./client-auth.controller";
 import { ClientAuthService } from "./client-auth.service";
@@ -15,6 +16,7 @@ import { OptionalClientJwtAuthGuard } from "./optional-client-jwt-auth.guard";
   imports: [
     ConfigModule,
     PassportModule,
+    SecurityModule,
     TypeOrmModule.forFeature([ClientAccountEntity]),
     JwtModule.registerAsync({
       inject: [ConfigService],

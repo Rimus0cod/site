@@ -1,5 +1,6 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { AdminAuditLogModule } from "../admin-audit/admin-audit-log.module";
 import { BookingHoldEntity } from "../booking-holds/booking-hold.entity";
 import { BarbersModule } from "../barbers/barbers.module";
 import { ClientAuthModule } from "../client-auth/client-auth.module";
@@ -27,6 +28,7 @@ import { PublicThrottleGuard } from "../common/guards/public-throttle.guard";
       WorkScheduleEntity,
       ScheduleExceptionEntity,
     ]),
+    AdminAuditLogModule,
     BarbersModule,
     ClientAuthModule,
     ServicesModule,
